@@ -19,8 +19,6 @@ package com.alibaba.otter.manager.biz.config.datamediasource.dal.dataobject;
 import java.io.Serializable;
 import java.util.Date;
 
-import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
-
 /**
  * @author simon
  */
@@ -29,7 +27,7 @@ public class DataMediaSourceDO implements Serializable {
     private static final long serialVersionUID = 5123273832849527936L;
     private Long              id;
     private String            name;
-    private DataMediaType     type;
+    private String     type;
     private String            properties;
     private Date              gmtCreate;
     private Date              gmtModified;
@@ -50,11 +48,11 @@ public class DataMediaSourceDO implements Serializable {
         this.name = name;
     }
 
-    public DataMediaType getType() {
+    public String getType() {
         return type;
     }
 
-    public void setType(DataMediaType type) {
+    public void setType(String type) {
         this.type = type;
     }
 

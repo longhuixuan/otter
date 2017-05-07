@@ -66,6 +66,7 @@
 		<property name="dataMediaSourceDao">
 			<ref bean="dataMediaSourceDao" />
 		</property>
+		<property name="dataMediaSourceTypeStr" value="${otter.loadDataSource}"/>
 	</bean>
 	
 	<bean id="nodeService" class="com.alibaba.otter.manager.biz.config.node.impl.NodeServiceImpl">

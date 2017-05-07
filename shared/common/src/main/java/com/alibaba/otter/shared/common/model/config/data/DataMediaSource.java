@@ -37,7 +37,7 @@ public class DataMediaSource implements Serializable {
     private static final long serialVersionUID = -7653632703273608373L;
     private Long              id;
     private String            name;
-    private DataMediaType     type;
+    private String     type;
     private String            encode;
     private Date              gmtCreate;
     private Date              gmtModified;
@@ -61,11 +61,11 @@ public class DataMediaSource implements Serializable {
         this.name = name;
     }
 
-    public DataMediaType getType() {
+    public String getType() {
         return type;
     }
 
-    public void setType(DataMediaType type) {
+    public void setType(String type) {
         this.type = type;
     }
 

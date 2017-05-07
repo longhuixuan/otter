@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.otter.common.push.datasource.DataSourceHanlder;
-import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -140,7 +139,7 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 	}
 
 	protected DataSource createDataSource(String url, String userName, String password, String driverClassName,
-			DataMediaType dataMediaType, String encoding) {
+			String dataMediaType, String encoding) {
 		MediaInfo media = parseMediaInfo(url);
 		if (media == null) {
 			if (isMediaPushDataSource(url)) {

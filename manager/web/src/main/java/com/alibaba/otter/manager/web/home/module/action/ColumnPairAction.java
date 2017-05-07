@@ -71,38 +71,14 @@ public class ColumnPairAction extends AbstractAction {
 
         DataMedia targetMedia = dataMediaPairService.findById(dataMediaPairId).getTarget();
 
-        if (!(targetMedia.getSource().getType().isNapoli() || targetMedia.getSource().getType().isElasticSearch() 
-        		|| targetMedia.getSource().getType().isHbase()||targetMedia.getSource().getType().isKafka()||targetMedia.getSource().getType().isHDFSArvo()) && sourceColumnNames.size() != targetColumnNames.size()) {
-            err.setMessage("invalidColumnPair");
-            return;
-        }
+        
         List<ColumnPair> columnPairsInDb = dataColumnPairService.listByDataMediaPairId(dataMediaPairId);
         List<ColumnPair> columnPairsTemp = new ArrayList<ColumnPair>();
         List<String> columnPairsNameSource = new ArrayList<String>();
         List<String> columnPairsNameTarget = new ArrayList<String>();
         List<ColumnPair> columnPairs = new ArrayList<ColumnPair>();
 
-        if (targetMedia.getSource().getType().isNapoli()) {
-            for (ColumnPair columnPair : columnPairsInDb) {
-                for (String sourceColumnName : sourceColumnNames) {
-                    if (StringUtils.isEquals(columnPair.getSourceColumn().getName(), sourceColumnName)) {
-                        columnPairsTemp.add(columnPair);
-                        columnPairsNameSource.add(sourceColumnName);
-                    }
-                }
-            }
-            // 要从数据库中删除这些columnPair
-            columnPairsInDb.removeAll(columnPairsTemp);
-            sourceColumnNames.removeAll(columnPairsNameSource);
-
-            for (String columnName : sourceColumnNames) {
-                ColumnPair columnPair = new ColumnPair();
-                columnPair.setSourceColumn(new Column(columnName));
-                columnPair.setDataMediaPairId(dataMediaPairId);
-                columnPairs.add(columnPair);
-            }
-        } else if (targetMedia.getSource().getType().isMysql() || targetMedia.getSource().getType().isOracle()
-        		|| targetMedia.getSource().getType().isGreenplum()||targetMedia.getSource().getType().isCassandra()) {
+        if ("mysql".equalsIgnoreCase(targetMedia.getSource().getType()) ) {
             for (ColumnPair columnPair : columnPairsInDb) {
                 int i = 0;
                 for (String sourceColumnName : sourceColumnNames) {

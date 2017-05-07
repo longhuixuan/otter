@@ -35,7 +35,6 @@ import com.alibaba.otter.common.push.supplier.DatasourceChangeCallback;
 import com.alibaba.otter.common.push.supplier.DatasourceInfo;
 import com.alibaba.otter.common.push.supplier.DatasourceSupplier;
 import com.alibaba.otter.common.push.supplier.media.MediaDatasourceSupplier;
-import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 
 /**
  * media datasource support
@@ -73,11 +72,11 @@ public class MediaPushDataSource implements DataSource {
     private String              userName;
     private String              password;
     private String              driverClassName;
-    private DataMediaType       dataMediaType;
+    private String       dataMediaType;
     private String              encoding;
 
     public MediaPushDataSource(String originalUrl, String userName, String password, String driverClassName,
-                               DataMediaType dataMediaType, String encoding){
+    		String dataMediaType, String encoding){
         this.originalUrl = originalUrl;
         this.userName = userName;
         this.password = password;
@@ -87,7 +86,7 @@ public class MediaPushDataSource implements DataSource {
     }
 
     public synchronized void init() {
-        if (!dataMediaType.isMysql()) {
+        if (!dataMediaType.equalsIgnoreCase("mysql")) {
             throw new UnsupportedOperationException("currently only support mysql type");
         }
 
@@ -151,10 +150,10 @@ public class MediaPushDataSource implements DataSource {
         dbcpDs.setUsername(userName);
         dbcpDs.setPassword(password);
 
-        if (dataMediaType.isOracle()) {
+        if (dataMediaType.equalsIgnoreCase("oracle")) {
             dbcpDs.addConnectionProperty("restrictGetTables", "true");
             dbcpDs.setValidationQuery("select 1 from dual");
-        } else if (dataMediaType.isMysql()) {
+        } else if (dataMediaType.equalsIgnoreCase("mysql")) {
             // open the batch mode for mysql since 5.1.8
             dbcpDs.addConnectionProperty("useServerPrepStmts", "false");
             dbcpDs.addConnectionProperty("rewriteBatchedStatements", "true");
@@ -301,7 +300,7 @@ public class MediaPushDataSource implements DataSource {
         return driverClassName;
     }
 
-    public DataMediaType getDataMediaType() {
+    public String getDataMediaType() {
         return dataMediaType;
     }
 
@@ -369,7 +368,7 @@ public class MediaPushDataSource implements DataSource {
         this.driverClassName = driverClassName;
     }
 
-    public void setDataMediaType(DataMediaType dataMediaType) {
+    public void setDataMediaType(String dataMediaType) {
         this.dataMediaType = dataMediaType;
     }
 

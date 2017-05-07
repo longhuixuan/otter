@@ -18,6 +18,7 @@
 		<module>communication</module>
 		<module>etl</module>
 		<module>push</module>
+		<module>plugin</module>
 	</modules>
 	
 	<dependencyManagement>

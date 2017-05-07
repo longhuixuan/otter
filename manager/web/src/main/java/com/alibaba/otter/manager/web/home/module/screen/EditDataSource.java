@@ -39,6 +39,7 @@ public class EditDataSource {
         context.put("source", source);
         context.put("pageIndex", pageIndex);
         context.put("searchKey", searchKey);
+        context.put("DataMediaSourceTypes",dataMediaSourceService.getDataMediaSourceTypes());
     }
 
 }

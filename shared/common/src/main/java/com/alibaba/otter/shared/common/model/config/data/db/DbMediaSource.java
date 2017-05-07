@@ -18,6 +18,7 @@ package com.alibaba.otter.shared.common.model.config.data.db;
 
 import java.util.Properties;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 
 /**
@@ -37,6 +38,34 @@ public class DbMediaSource extends DataMediaSource {
     private String            driver;
     private Properties        properties;
 
+    public static void main(String[] args){
+    	DbMediaSource ds=new DbMediaSource();
+    	ds.setType("mysql");
+    	System.out.println(JSON.toJSONString(ds));
+    }
+    
+    @Override
+    public String getPropertiesStr() {
+    	DbMediaSource ds=new DbMediaSource();
+    	if (this.getType().equalsIgnoreCase("mysql")){
+    		setUrl("jdbc:mysql://host:port");
+    		setUsername("otter");
+    		setPassword("otter");
+    		setDriver("com.mysql.jdbc.Driver");
+    	}else if (this.getType().equalsIgnoreCase("Oracle")){
+    		setUrl("jdbc:oracle:thin:@host:port:SID");
+    		setUsername("otter");
+    		setPassword("otter");
+    		setDriver("oracle.jdbc.driver.OracleDriver");
+    	}else if (this.getType().equalsIgnoreCase("Greenplum")){
+    		setUrl("jdbc:oracle:thin:@host:port:SID");
+    		setUsername("otter");
+    		setPassword("otter");
+    		setDriver("oracle.jdbc.driver.OracleDriver");
+    	}
+    	return JSON.toJSONString(ds);
+	} 
+    
     public String getUrl() {
         return url;
     }

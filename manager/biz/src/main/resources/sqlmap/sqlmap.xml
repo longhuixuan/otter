@@ -19,6 +19,7 @@
 	<sqlMap resource="sqlmap/sqlmap-mapping-pipeline.xml" />
 	<sqlMap resource="sqlmap/sqlmap-mapping-datamedia.xml" />
 	<sqlMap resource="sqlmap/sqlmap-mapping-datamediasource.xml" />
+	<sqlMap resource="sqlmap/sqlmap-mapping-datamediatype.xml" />
 	<sqlMap resource="sqlmap/sqlmap-mapping-datamediapair.xml" />
 	<sqlMap resource="sqlmap/sqlmap-mapping-node.xml" />
 	<sqlMap resource="sqlmap/sqlmap-mapping-canal.xml" />

@@ -17,6 +17,9 @@
 package com.alibaba.otter.manager.biz.config.datamediasource;
 
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
+
+import java.util.List;
+
 import com.alibaba.otter.manager.biz.common.baseservice.GenericService;
 
 /**
@@ -25,4 +28,6 @@ import com.alibaba.otter.manager.biz.common.baseservice.GenericService;
 public interface DataMediaSourceService extends GenericService<DataMediaSource> {
 
     // public List<DataMediaSource> listDataMediaSourceById(Long... dataMediaSourceIds);
+	
+	public List<String> getDataMediaSourceTypes();
 }

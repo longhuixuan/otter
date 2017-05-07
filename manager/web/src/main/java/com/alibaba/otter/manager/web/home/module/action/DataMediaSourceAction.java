@@ -59,77 +59,78 @@ public class DataMediaSourceAction extends AbstractAction {
         DataMediaSource dataMediaSource = new DataMediaSource();
         dataMediaSourceInfo.setProperties(dataMediaSource);
 
-        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isGreenplum()) {
+        if ("mysql".equalsIgnoreCase(dataMediaSource.getType()) ){
             DbMediaSource dbMediaSource = new DbMediaSource();
             dataMediaSourceInfo.setProperties(dbMediaSource);
-            if (dataMediaSource.getType().isMysql()) {
+//            if (dataMediaSource.getType().isMysql()) {
                 dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-            } else if (dataMediaSource.getType().isOracle()) {
-                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-            }else if (dataMediaSource.getType().isGreenplum()) {
-                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
-            }
+//            } else if (dataMediaSource.getType().isOracle()) {
+//                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+//            }else if (dataMediaSource.getType().isGreenplum()) {
+//                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
+//            }
             try {
                 dataMediaSourceService.create(dbMediaSource);
             } catch (RepeatConfigureException rce) {
                 err.setMessage("invalidDataMediaSource");
                 return;
             }
-        } else if (dataMediaSource.getType().isMq()) {
-            MqMediaSource mqMediaSource = new MqMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }else if ( dataMediaSource.getType().isCassandra()){
-        	CassandraMediaSource mqMediaSource = new CassandraMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }else if (dataMediaSource.getType().isElasticSearch()){
-        	ElasticSearchMediaSource mqMediaSource = new ElasticSearchMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }else if (dataMediaSource.getType().isHbase()){
-        	HBaseMediaSource mqMediaSource = new HBaseMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }else if (dataMediaSource.getType().isHDFSArvo()){
-        	HDFSMediaSource mqMediaSource = new HDFSMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }else if (dataMediaSource.getType().isKafka()){
-        	KafkaMediaSource mqMediaSource = new KafkaMediaSource();
-            dataMediaSourceInfo.setProperties(mqMediaSource);
-            try {
-                dataMediaSourceService.create(mqMediaSource);
-            } catch (RepeatConfigureException rce) {
-                err.setMessage("invalidDataMediaSource");
-                return;
-            }
-        }
+        } 
+//        else if (dataMediaSource.getType().isMq()) {
+//            MqMediaSource mqMediaSource = new MqMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }else if ( dataMediaSource.getType().isCassandra()){
+//        	CassandraMediaSource mqMediaSource = new CassandraMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }else if (dataMediaSource.getType().isElasticSearch()){
+//        	ElasticSearchMediaSource mqMediaSource = new ElasticSearchMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }else if (dataMediaSource.getType().isHbase()){
+//        	HBaseMediaSource mqMediaSource = new HBaseMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }else if (dataMediaSource.getType().isHDFSArvo()){
+//        	HDFSMediaSource mqMediaSource = new HDFSMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }else if (dataMediaSource.getType().isKafka()){
+//        	KafkaMediaSource mqMediaSource = new KafkaMediaSource();
+//            dataMediaSourceInfo.setProperties(mqMediaSource);
+//            try {
+//                dataMediaSourceService.create(mqMediaSource);
+//            } catch (RepeatConfigureException rce) {
+//                err.setMessage("invalidDataMediaSource");
+//                return;
+//            }
+//        }
 		 nav.redirectTo(WebConstant.DATA_MEDIA_SOURCE_LIST_LINK);
     }
 
@@ -153,13 +154,13 @@ public class DataMediaSourceAction extends AbstractAction {
         DbMediaSource dbMediaSource = new DbMediaSource();
         dataMediaSourceInfo.setProperties(dbMediaSource);
 
-        if (dbMediaSource.getType().isMysql()) {
+//        if (dbMediaSource.getType().isMysql()) {
             dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-        } else if (dbMediaSource.getType().isOracle()) {
-            dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-        }else if (dbMediaSource.getType().isGreenplum()) {
-            dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
-        }
+//        } else if (dbMediaSource.getType().isOracle()) {
+//            dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+//        }else if (dbMediaSource.getType().isGreenplum()) {
+//            dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
+//        }
 
         try {
             dataMediaSourceService.modify(dbMediaSource);
