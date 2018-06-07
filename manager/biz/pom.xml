@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.alibaba.otter</groupId>
 		<artifactId>manager</artifactId>
-		<version>4.2.14</version>
+		<version>4.3.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<groupId>com.alibaba.otter</groupId>
@@ -174,7 +174,7 @@
 		<!-- Kafka -->
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
-			<artifactId>kafka_2.10</artifactId>
+			<artifactId>kafka_2.11</artifactId>
 		</dependency>
 		<!-- Cassandra -->
 		<dependency>

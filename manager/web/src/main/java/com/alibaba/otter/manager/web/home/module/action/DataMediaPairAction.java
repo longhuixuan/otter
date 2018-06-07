@@ -22,6 +22,7 @@ import java.util.List;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.kafka.common.errors.TopicExistsException;
 
 import com.alibaba.citrus.service.form.CustomErrors;
 import com.alibaba.citrus.service.form.Group;
@@ -44,7 +45,6 @@ import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.ExtensionData;
 import com.alibaba.otter.shared.common.model.config.data.ExtensionDataType;
 
-import kafka.common.TopicExistsException;
 
 public class DataMediaPairAction {
 
