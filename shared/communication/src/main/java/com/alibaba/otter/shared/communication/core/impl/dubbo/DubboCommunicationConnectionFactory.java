@@ -17,7 +17,6 @@
 package com.alibaba.otter.shared.communication.core.impl.dubbo;
 
 import java.text.MessageFormat;
-import java.util.concurrent.ExecutionException;
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.extension.ExtensionLoader;
@@ -48,7 +47,7 @@ public class DubboCommunicationConnectionFactory implements CommunicationConnect
 	private LoadingCache<String, CommunicationEndpoint> connections = null;
 
 	public DubboCommunicationConnectionFactory() {
-		connections = CacheBuilder.newBuilder().maximumSize(1000)
+		connections = CacheBuilder.newBuilder().maximumSize(1000) // 最多可以缓存1000个key
 				.build(new CacheLoader<String, CommunicationEndpoint>() {
 
 					@Override
@@ -63,17 +62,16 @@ public class DubboCommunicationConnectionFactory implements CommunicationConnect
 		if (params == null) {
 			throw new IllegalArgumentException("param is null!");
 		}
-
-		// 构造对应的url
-		String serviceUrl = MessageFormat.format(DUBBO_SERVICE_URL, params.getIp(), String.valueOf(params.getPort()));
-		CommunicationEndpoint endpoint;
 		try {
-			endpoint = connections.get(serviceUrl);
+			// 构造对应的url
+			String serviceUrl = MessageFormat.format(DUBBO_SERVICE_URL, params.getIp(),
+					String.valueOf(params.getPort()));
+			CommunicationEndpoint endpoint = connections.get(serviceUrl);
 			return new DubboCommunicationConnection(params, endpoint);
-		} catch (ExecutionException e) {
-			e.printStackTrace();
+		} catch (Exception ex) {
 			return null;
 		}
+
 	}
 
 	public void releaseConnection(CommunicationConnection connection) {

@@ -49,276 +49,266 @@ import com.google.common.cache.LoadingCache;
  */
 public class ConfigHelper {
 
-    public static final String          MODE_PATTERN = "(.*)(\\[(\\d+)\\-(\\d+)\\])(.*)"; // 匹配offer[1-128]
-    private static LoadingCache<String, Pattern> patterns     = CacheBuilder.newBuilder().maximumSize(1000)
-			.build(new CacheLoader<String, Pattern>() { 
-														@Override
-														public Pattern load(String input) throws Exception {
-															PatternCompiler pc = new Perl5Compiler();
-                                                            try {
-                                                                return pc.compile(input,
-                                                                    Perl5Compiler.CASE_INSENSITIVE_MASK
-                                                                            | Perl5Compiler.READ_ONLY_MASK);
-                                                            } catch (MalformedPatternException e) {
-                                                                throw new ConfigException(e);
-                                                            }
-														}
-                                                     });
+	public static final String MODE_PATTERN = "(.*)(\\[(\\d+)\\-(\\d+)\\])(.*)"; // 匹配offer[1-128]
+	private static LoadingCache<String, Pattern> patterns = CacheBuilder.newBuilder().maximumSize(1000)
+			.build(new CacheLoader<String, Pattern>() {
 
-    /**
-     * 根据DataMedia id得到对应的DataMedia
-     */
-    public static DataMedia<? extends DataMediaSource> findDataMedia(Pipeline pipeline, Long id) {
-        Assert.notNull(pipeline);
-        for (DataMediaPair pair : pipeline.getPairs()) {
-            if (pair.getSource().getId().equals(id)) {
-                return pair.getSource();
-            } else if (pair.getTarget().getId().equals(id)) {
-                return pair.getTarget();
-            }
-        }
+				@Override
+				public Pattern load(String input) throws Exception {
+					PatternCompiler pc = new Perl5Compiler();
+					try {
+						return pc.compile(input, Perl5Compiler.CASE_INSENSITIVE_MASK | Perl5Compiler.READ_ONLY_MASK);
+					} catch (MalformedPatternException e) {
+						throw new ConfigException(e);
+					}
+				}
+			});
 
-        throw new ConfigException("no such DataMedia , the tableId = " + id);
-    }
+	// new MapMaker().makeComputingMap(new Function<String, Pattern>() {
+	//
+	// public Pattern apply(String input) {
+	// PatternCompiler pc = new Perl5Compiler();
+	// try {
+	// return pc.compile(input,
+	// Perl5Compiler.CASE_INSENSITIVE_MASK
+	// | Perl5Compiler.READ_ONLY_MASK);
+	// } catch (MalformedPatternException e) {
+	// throw new ConfigException(e);
+	// }
+	// }
+	// });
 
-    /**
-     * 根据NameSpace和Name得到对应的DataMedia.
-     */
-    public static DataMedia<? extends DataMediaSource> findSourceDataMedia(Pipeline pipeline, String namespace,
-                                                                           String name) {
-        return findSourceDataMedia(pipeline, namespace, name, false);
-    }
-
-    /**
-     * 根据NameSpace和Name得到对应的DataMedia
-     */
-    public static DataMedia<? extends DataMediaSource> findSourceDataMedia(Pipeline pipeline, String namespace,
-                                                                           String name, boolean notExistReturnNull) {
-        for (DataMediaPair pair : pipeline.getPairs()) {
-            if (isMatch(pair.getSource(), namespace, name)) {
-                return pair.getSource();
-            }
-        }
-
-        if (notExistReturnNull) {
-            return null;
-        } else {
-            throw new ConfigException("no such DataMedia , the namespace = " + namespace + " name = " + name);
-        }
-    }
-
-    /**
-     * 根据NameSpace和Name得到对应的DataMediaPair.
-     */
-    public static DataMediaPair findDataMediaPairBySourceName(Pipeline pipeline, String namespace, String name) {
-        return findDataMediaPairBySourceName(pipeline, namespace, name, false);
-    }
-
-    /**
-     * 根据NameSpace和Name得到对应的DataMediaPair
-     */
-    public static DataMediaPair findDataMediaPairBySourceName(Pipeline pipeline, String namespace, String name,
-                                                              boolean notExistReturnNull) {
-        for (DataMediaPair pair : pipeline.getPairs()) {
-            if (isMatch(pair.getSource(), namespace, name)) {
-                return pair;
-            }
-        }
-
-        if (notExistReturnNull) {
-            return null;
-        } else {
-            throw new ConfigException("no such DataMedia , the namespace = " + namespace + " name = " + name);
-        }
-    }
-
-    /**
-     * 根据DataMedia id得到对应的DataMediaPair
-     */
-    public static List<DataMediaPair> findDataMediaPairByMediaId(Pipeline pipeline, Long tid) {
-        Assert.notNull(pipeline);
-        List<DataMediaPair> pairs = new ArrayList<DataMediaPair>();
-        for (DataMediaPair pair : pipeline.getPairs()) {
-            if (pair.getSource().getId().equals(tid)) {
-                pairs.add(pair);
-            } else if (pair.getTarget().getId().equals(tid)) {
-                pairs.add(pair);
-            }
-        }
-
-        return pairs;
-    }
-
-    /**
-     * 根据DataMedia id得到对应的DataMediaPair
-     */
-    public static DataMediaPair findDataMediaPair(Pipeline pipeline, Long pairId) {
-        Assert.notNull(pipeline);
-        for (DataMediaPair pair : pipeline.getPairs()) {
-            if (pair.getId().equals(pairId)) {
-                return pair;
-            }
-        }
-
-        throw new ConfigException("no such DataMediaPair , the pairId = " + pairId);
-    }
-
-    /**
-     * 解析DataMedia中的namespace和name，支持offer[1-128]分库的定义
-     */
-    public static ModeValue parseMode(String value) {
-        PatternMatcher matcher = new Perl5Matcher();
-        try {
-			if (matcher.matches(value, patterns.get(MODE_PATTERN))) {
-			    MatchResult matchResult = matcher.getMatch();
-			    String prefix = matchResult.group(1);
-			    String startStr = matchResult.group(3);
-			    String ednStr = matchResult.group(4);
-			    int start = Integer.valueOf(startStr);
-			    int end = Integer.valueOf(ednStr);
-			    String postfix = matchResult.group(5);
-
-			    List<String> values = new ArrayList<String>();
-			    for (int i = start; i <= end; i++) {
-			        StringBuilder builder = new StringBuilder(value.length());
-			        String str = String.valueOf(i);
-			        // 处理0001类型
-			        if (startStr.length() == ednStr.length() && startStr.startsWith("0")) {
-			            str = StringUtils.leftPad(String.valueOf(i), startStr.length(), '0');
-			        }
-
-			        builder.append(prefix).append(str).append(postfix);
-			        values.add(builder.toString());
-			    }
-			    return new ModeValue(Mode.MULTI, values);
-			} else if (isWildCard(value)) {// 通配符支持
-			    return new ModeValue(Mode.WILDCARD, Arrays.asList(value));
-			} else {
-			    return new ModeValue(Mode.SINGLE, Arrays.asList(value));
+	/**
+	 * 根据DataMedia id得到对应的DataMedia
+	 */
+	public static DataMedia<? extends DataMediaSource> findDataMedia(Pipeline pipeline, Long id) {
+		Assert.notNull(pipeline);
+		for (DataMediaPair pair : pipeline.getPairs()) {
+			if (pair.getSource().getId().equals(id)) {
+				return pair.getSource();
+			} else if (pair.getTarget().getId().equals(id)) {
+				return pair.getTarget();
 			}
-		}  catch (ExecutionException e) {
+		}
+
+		throw new ConfigException("no such DataMedia , the tableId = " + id);
+	}
+
+	/**
+	 * 根据NameSpace和Name得到对应的DataMedia.
+	 */
+	public static DataMedia<? extends DataMediaSource> findSourceDataMedia(Pipeline pipeline, String namespace,
+			String name) {
+		return findSourceDataMedia(pipeline, namespace, name, false);
+	}
+
+	/**
+	 * 根据NameSpace和Name得到对应的DataMedia
+	 */
+	public static DataMedia<? extends DataMediaSource> findSourceDataMedia(Pipeline pipeline, String namespace,
+			String name, boolean notExistReturnNull) {
+		for (DataMediaPair pair : pipeline.getPairs()) {
+			if (isMatch(pair.getSource(), namespace, name)) {
+				return pair.getSource();
+			}
+		}
+
+		if (notExistReturnNull) {
+			return null;
+		} else {
+			throw new ConfigException("no such DataMedia , the namespace = " + namespace + " name = " + name);
+		}
+	}
+
+	/**
+	 * 根据DataMedia id得到对应的DataMediaPair
+	 */
+	public static List<DataMediaPair> findDataMediaPairByMediaId(Pipeline pipeline, Long tid) {
+		Assert.notNull(pipeline);
+		List<DataMediaPair> pairs = new ArrayList<DataMediaPair>();
+		for (DataMediaPair pair : pipeline.getPairs()) {
+			if (pair.getSource().getId().equals(tid)) {
+				pairs.add(pair);
+			} else if (pair.getTarget().getId().equals(tid)) {
+				pairs.add(pair);
+			}
+		}
+
+		return pairs;
+	}
+
+	/**
+	 * 根据DataMedia id得到对应的DataMediaPair
+	 */
+	public static DataMediaPair findDataMediaPair(Pipeline pipeline, Long pairId) {
+		Assert.notNull(pipeline);
+		for (DataMediaPair pair : pipeline.getPairs()) {
+			if (pair.getId().equals(pairId)) {
+				return pair;
+			}
+		}
+
+		throw new ConfigException("no such DataMediaPair , the pairId = " + pairId);
+	}
+
+	/**
+	 * 解析DataMedia中的namespace和name，支持offer[1-128]分库的定义
+	 */
+	public static ModeValue parseMode(String value) {
+		PatternMatcher matcher = new Perl5Matcher();
+		try {
+			Pattern pattern = patterns.get(MODE_PATTERN);
+			if (matcher.matches(value, pattern)) {
+				MatchResult matchResult = matcher.getMatch();
+				String prefix = matchResult.group(1);
+				String startStr = matchResult.group(3);
+				String ednStr = matchResult.group(4);
+				int start = Integer.valueOf(startStr);
+				int end = Integer.valueOf(ednStr);
+				String postfix = matchResult.group(5);
+
+				List<String> values = new ArrayList<String>();
+				for (int i = start; i <= end; i++) {
+					StringBuilder builder = new StringBuilder(value.length());
+					String str = String.valueOf(i);
+					// 处理0001类型
+					if (startStr.length() == ednStr.length() && startStr.startsWith("0")) {
+						str = StringUtils.leftPad(String.valueOf(i), startStr.length(), '0');
+					}
+
+					builder.append(prefix).append(str).append(postfix);
+					values.add(builder.toString());
+				}
+				return new ModeValue(Mode.MULTI, values);
+			} else if (isWildCard(value)) {// 通配符支持
+				return new ModeValue(Mode.WILDCARD, Arrays.asList(value));
+			} else {
+				return new ModeValue(Mode.SINGLE, Arrays.asList(value));
+			}
+		} catch (Exception ex) {
 			return null;
 		}
-    }
 
-    public static String makeSQLPattern(String rawValue) {
-        return makeSQLPattern(parseMode(rawValue), rawValue);
-    }
+	}
 
-    public static String makeSQLPattern(ModeValue mode, String rawValue) {
-        Assert.notNull(mode);
-        Assert.notNull(rawValue);
-        if (mode.getMode().isSingle()) {
-            return rawValue;
-        } else if (mode.getMode().isMulti()) {
-            return StringUtils.substringBefore(rawValue, "[") + "%";
-        } else if (mode.getMode().isWildCard()) {
-            StringBuilder sb = new StringBuilder(rawValue.length());
-            FOR_LOOP: for (int i = 0; i < rawValue.length(); i++) {
-                String charString = String.valueOf(rawValue.charAt(i));
-                if (isWildCard(charString)) {
-                    break FOR_LOOP;
-                } else {
-                    sb.append(rawValue.charAt(i));
-                }
-            }
-            return sb.toString() + "%";
-        } else {
-            throw new UnsupportedOperationException("unsupport mode:" + mode.getMode());
-        }
-    }
+	public static String makeSQLPattern(String rawValue) {
+		return makeSQLPattern(parseMode(rawValue), rawValue);
+	}
 
-    public static ModeValueFilter makeModeValueFilter(final ModeValue mode, final String rawValue) {
-        Assert.notNull(mode);
-        Assert.notNull(rawValue);
-        if (mode.getMode().isSingle()) {
-            return new ModeValueFilter() {
+	public static String makeSQLPattern(ModeValue mode, String rawValue) {
+		Assert.notNull(mode);
+		Assert.notNull(rawValue);
+		if (mode.getMode().isSingle()) {
+			return rawValue;
+		} else if (mode.getMode().isMulti()) {
+			return StringUtils.substringBefore(rawValue, "[") + "%";
+		} else if (mode.getMode().isWildCard()) {
+			StringBuilder sb = new StringBuilder(rawValue.length());
+			FOR_LOOP: for (int i = 0; i < rawValue.length(); i++) {
+				String charString = String.valueOf(rawValue.charAt(i));
+				if (isWildCard(charString)) {
+					break FOR_LOOP;
+				} else {
+					sb.append(rawValue.charAt(i));
+				}
+			}
+			return sb.toString() + "%";
+		} else {
+			throw new UnsupportedOperationException("unsupport mode:" + mode.getMode());
+		}
+	}
 
-                @Override
-                public boolean accept(String value) {
-                    return rawValue.equalsIgnoreCase(value);
-                }
-            };
-        } else if (mode.getMode().isWildCard()) {
-            return new ModeValueFilter() {
+	public static ModeValueFilter makeModeValueFilter(final ModeValue mode, final String rawValue) {
+		Assert.notNull(mode);
+		Assert.notNull(rawValue);
+		if (mode.getMode().isSingle()) {
+			return new ModeValueFilter() {
 
-                @Override
-                public boolean accept(String value) {
-                    return isWildCardMatch(rawValue, value);
-                }
-            };
-        } else if (mode.getMode().isMulti()) {
-            return new ModeValueFilter() {
+				@Override
+				public boolean accept(String value) {
+					return rawValue.equalsIgnoreCase(value);
+				}
+			};
+		} else if (mode.getMode().isWildCard()) {
+			return new ModeValueFilter() {
 
-                @Override
-                public boolean accept(String value) {
-                    return (indexIgnoreCase(mode.getMultiValue(), value) != -1);
-                }
-            };
-        } else {
-            throw new UnsupportedOperationException("unsupport mode:" + mode.getMode());
-        }
-    }
+				@Override
+				public boolean accept(String value) {
+					return isWildCardMatch(rawValue, value);
+				}
+			};
+		} else if (mode.getMode().isMulti()) {
+			return new ModeValueFilter() {
 
-    // ===================== helper method ================
+				@Override
+				public boolean accept(String value) {
+					return (indexIgnoreCase(mode.getMultiValue(), value) != -1);
+				}
+			};
+		} else {
+			throw new UnsupportedOperationException("unsupport mode:" + mode.getMode());
+		}
+	}
 
-    private static boolean isMatch(DataMedia dataMedia, String namespace, String name) {
-        boolean isMatch = true;
-        if (StringUtils.isEmpty(namespace)) {
-            isMatch &= StringUtils.isEmpty(dataMedia.getNamespace());
-        } else {
-            if (dataMedia.getNamespaceMode().getMode().isSingle()) {
-                isMatch &= dataMedia.getNamespace().equalsIgnoreCase(namespace);
-            } else if (dataMedia.getNamespaceMode().getMode().isMulti()) {
-                isMatch &= (indexIgnoreCase(dataMedia.getNamespaceMode().getMultiValue(), namespace) != -1);
-            } else if (dataMedia.getNamespaceMode().getMode().isWildCard()) {
-                isMatch &= isWildCardMatch(dataMedia.getNamespace(), namespace);
-            } else {
-                throw new UnsupportedOperationException("unsupport mode:" + dataMedia.getNameMode().getMode());
-            }
-        }
+	// ===================== helper method ================
 
-        if (StringUtils.isEmpty(name)) {
-            isMatch &= StringUtils.isEmpty(dataMedia.getName());
-        } else {
-            if (dataMedia.getNameMode().getMode().isSingle()) {
-                isMatch &= dataMedia.getName().equalsIgnoreCase(name);
-            } else if (dataMedia.getNameMode().getMode().isMulti()) {
-                isMatch &= (indexIgnoreCase(dataMedia.getNameMode().getMultiValue(), name) != -1);
-            } else if (dataMedia.getNameMode().getMode().isWildCard()) {
-                isMatch &= isWildCardMatch(dataMedia.getName(), name);
-            } else {
-                throw new UnsupportedOperationException("unsupport mode:" + dataMedia.getNameMode().getMode());
-            }
-        }
+	public static boolean isMatch(DataMedia dataMedia, String namespace, String name) {
+		boolean isMatch = true;
+		if (StringUtils.isEmpty(namespace)) {
+			isMatch &= StringUtils.isEmpty(dataMedia.getNamespace());
+		} else {
+			if (dataMedia.getNamespaceMode().getMode().isSingle()) {
+				isMatch &= dataMedia.getNamespace().equalsIgnoreCase(namespace);
+			} else if (dataMedia.getNamespaceMode().getMode().isMulti()) {
+				isMatch &= (indexIgnoreCase(dataMedia.getNamespaceMode().getMultiValue(), namespace) != -1);
+			} else if (dataMedia.getNamespaceMode().getMode().isWildCard()) {
+				isMatch &= isWildCardMatch(dataMedia.getNamespace(), namespace);
+			} else {
+				throw new UnsupportedOperationException("unsupport mode:" + dataMedia.getNameMode().getMode());
+			}
+		}
 
-        return isMatch;
-    }
+		if (StringUtils.isEmpty(name)) {
+			isMatch &= StringUtils.isEmpty(dataMedia.getName());
+		} else {
+			if (dataMedia.getNameMode().getMode().isSingle()) {
+				isMatch &= dataMedia.getName().equalsIgnoreCase(name);
+			} else if (dataMedia.getNameMode().getMode().isMulti()) {
+				isMatch &= (indexIgnoreCase(dataMedia.getNameMode().getMultiValue(), name) != -1);
+			} else if (dataMedia.getNameMode().getMode().isWildCard()) {
+				isMatch &= isWildCardMatch(dataMedia.getName(), name);
+			} else {
+				throw new UnsupportedOperationException("unsupport mode:" + dataMedia.getNameMode().getMode());
+			}
+		}
 
-    private static boolean isWildCard(String value) {
-        return StringUtils.containsAny(value, new char[] { '*', '?', '+', '|', '(', ')', '{', '}', '[', ']', '\\', '$',
-                '^', '.' });
-    }
+		return isMatch;
+	}
 
-    private static boolean isWildCardMatch(String matchPattern, String value) {
-        PatternMatcher matcher = new Perl5Matcher();
-        try {
+	private static boolean isWildCard(String value) {
+		return StringUtils.containsAny(value,
+				new char[] { '*', '?', '+', '|', '(', ')', '{', '}', '[', ']', '\\', '$', '^', '.' });
+	}
+
+	private static boolean isWildCardMatch(String matchPattern, String value) {
+		PatternMatcher matcher = new Perl5Matcher();
+		try {
 			return matcher.matches(value, patterns.get(matchPattern));
 		} catch (ExecutionException e) {
 			return false;
 		}
-    }
+	}
 
-    public static int indexIgnoreCase(List<String> datas, String value) {
-        for (int i = 0; i < datas.size(); i++) {
-            String data = datas.get(i);
-            if (data.equalsIgnoreCase(value)) {
-                return i;
-            }
+	public static int indexIgnoreCase(List<String> datas, String value) {
+		for (int i = 0; i < datas.size(); i++) {
+			String data = datas.get(i);
+			if (data.equalsIgnoreCase(value)) {
+				return i;
+			}
 
-        }
+		}
 
-        return -1;
-    }
+		return -1;
+	}
 
 }

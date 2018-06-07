@@ -1,9 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.alibaba.otter</groupId>
 		<artifactId>node</artifactId>
-		<version>4.2.14-SNAPSHOT</version>
+		<version>4.2.14</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<groupId>com.alibaba.otter</groupId>
@@ -59,23 +60,24 @@
 			<groupId>de.schlichtherle</groupId>
 			<artifactId>truezip</artifactId>
 		</dependency>
-		
+
 		<!-- jetty -->
 		<dependency>
-		  <groupId>org.eclipse.jetty</groupId>
-		  <artifactId>jetty-servlet</artifactId>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlet</artifactId>
 		</dependency>
 		<dependency>
-		  <groupId>org.eclipse.jetty</groupId>
-		  <artifactId>jetty-xml</artifactId>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-xml</artifactId>
 		</dependency>
 		<dependency>
-		  <groupId>org.eclipse.jetty</groupId>
-		  <artifactId>jetty-server</artifactId>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+
 		</dependency>
 		<dependency>
-		  <groupId>org.eclipse.jetty</groupId>
-		  <artifactId>jetty-http</artifactId>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-http</artifactId>
 		</dependency>
 		<!-- test dependency -->
 		<dependency>

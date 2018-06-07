@@ -36,20 +36,21 @@ public class LoadStatsTracker {
     private LoadingCache<Identity, LoadThroughput> throughputs;
 
     public LoadStatsTracker(){
-        throughputs =  CacheBuilder.newBuilder().maximumSize(1000)
+        throughputs = CacheBuilder.newBuilder().maximumSize(1000)
     			.build(new CacheLoader<Identity, LoadThroughput>() {
+    				@Override
+    				public LoadThroughput load(Identity identity) throws Exception {
+    					return new LoadThroughput(identity);
+    				}
 
-            public LoadThroughput load(Identity identity) {
-                return new LoadThroughput(identity);
-            }
-        });
+    			});
+       
     }
 
     public LoadThroughput getStat(Identity identity) {
         try {
 			return throughputs.get(identity);
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
     }
@@ -65,20 +66,20 @@ public class LoadStatsTracker {
         private LoadingCache<Long, LoadCounter> counters;
 
         public LoadThroughput(Identity identity){
-            counters = CacheBuilder.newBuilder().maximumSize(1000)
+            counters =CacheBuilder.newBuilder().maximumSize(1000)
         			.build(new CacheLoader<Long, LoadCounter>() {
+        				@Override
+        				public LoadCounter load(Long pairId) throws Exception {
+        					 return new LoadCounter(pairId);
+        				}
 
-                public LoadCounter load(Long pairId) {
-                    return new LoadCounter(pairId);
-                }
-            });
+        			});
         }
 
         public LoadCounter getStat(Long pairId) {
             try {
 				return counters.get(pairId);
 			} catch (ExecutionException e) {
-				e.printStackTrace();
 				return null;
 			}
         }

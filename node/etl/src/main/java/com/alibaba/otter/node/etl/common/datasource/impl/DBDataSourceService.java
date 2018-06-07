@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -32,7 +33,22 @@ import javax.sql.DataSource;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.plugin.deletebyquery.DeleteByQueryPlugin;
+import org.elasticsearch.shield.ShieldPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -43,15 +59,11 @@ import com.alibaba.otter.common.push.datasource.DataSourceHanlder;
 import com.alibaba.otter.node.etl.common.datasource.DataSourceService;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
-import com.alibaba.otter.shared.common.model.config.data.ServerPort;
-import com.alibaba.otter.shared.common.model.config.data.cassandra.CassandraMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.elasticsearch.ElasticSearchMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.hbase.HBaseMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.hdfs.HDFSMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.kafka.KafkaMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.mq.MqMediaSource;
-import com.alibaba.rocketmq.client.exception.MQClientException;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Cluster.Builder;
+import com.datastax.driver.core.Host;
+import com.datastax.driver.core.Metadata;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -76,9 +88,9 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 
 	private int initialSize = 0;
 
-	private int maxActive = 32;
+	private int maxActive = 16;
 
-	private int maxIdle = 32;
+	private int maxIdle = 16;
 
 	private int numTestsPerEvictionRun = -1;
 
@@ -93,14 +105,14 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	 * key = pipelineId<br>
 	 * value = key(dataMediaSourceId)-value(DataSource)<br>
 	 */
-	private LoadingCache<Long, LoadingCache<DataMediaSource, Object>> dataSources;
+	private LoadingCache<Long, LoadingCache<DbMediaSource, Object>> dataSources;
 
 	public DBDataSourceService() {
 		// 设置soft策略
-		CacheBuilder<Long, LoadingCache<DataMediaSource, Object>> cacheBuilder = CacheBuilder.newBuilder().softValues()
-				.removalListener(new RemovalListener<Long, LoadingCache<DataMediaSource, Object>>() {
+		CacheBuilder<Long, LoadingCache<DbMediaSource, Object>> cacheBuilder = CacheBuilder.newBuilder().softValues()
+				.removalListener(new RemovalListener<Long, LoadingCache<DbMediaSource, Object>>() {
 					@Override
-					public void onRemoval(RemovalNotification<Long, LoadingCache<DataMediaSource, Object>> paramR) {
+					public void onRemoval(RemovalNotification<Long, LoadingCache<DbMediaSource, Object>> paramR) {
 						if (dataSources == null) {
 							return;
 						}
@@ -111,28 +123,25 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 									// for filter to destroy custom datasource
 									if (letHandlerDestroyIfSupport(paramR.getKey(), source)) {
 										continue;
-									}
+									} // fallback for regular destroy TODO need
+										// to integrate to handler
 									BasicDataSource basicDataSource = (BasicDataSource) source;
 									basicDataSource.close();
-								} else if (dbconn instanceof org.elasticsearch.client.Client) {
-									org.elasticsearch.client.Client client = (org.elasticsearch.client.Client) dbconn;
+								} else if (dbconn instanceof Client) {
+									Client client = (Client) dbconn;
 									client.close();
-								} else if (dbconn instanceof org.apache.hadoop.hbase.client.Connection) {
-									org.apache.hadoop.hbase.client.Connection hbaseconn = (org.apache.hadoop.hbase.client.Connection) dbconn;
+								} else if (dbconn instanceof Connection) {
+									Connection hbaseconn = (Connection) dbconn;
 									hbaseconn.close();
-								} else if (dbconn instanceof org.apache.kafka.clients.producer.Producer) {
-									@SuppressWarnings("rawtypes")
-									org.apache.kafka.clients.producer.Producer producer = (org.apache.kafka.clients.producer.Producer) dbconn;
+								} else if (dbconn instanceof Producer) {
+									Producer producer = (Producer) dbconn;
 									producer.close();
-								} else if (dbconn instanceof com.datastax.driver.core.Cluster) {
-									com.datastax.driver.core.Cluster producer = (com.datastax.driver.core.Cluster) dbconn;
+								} else if (dbconn instanceof Cluster) {
+									Cluster producer = (Cluster) dbconn;
 									producer.close();
-								} else if (dbconn instanceof org.apache.hadoop.fs.FileSystem) {
-									org.apache.hadoop.fs.FileSystem filesystem = (org.apache.hadoop.fs.FileSystem) dbconn;
+								} else if (dbconn instanceof FileSystem) {
+									FileSystem filesystem = (FileSystem) dbconn;
 									filesystem.close();
-								} else if (dbconn instanceof com.alibaba.rocketmq.client.producer.MQProducer) {
-									com.alibaba.rocketmq.client.producer.MQProducer mqProducer = (com.alibaba.rocketmq.client.producer.MQProducer) dbconn;
-									mqProducer.shutdown();
 								}
 							} catch (SQLException | IOException e) {
 								logger.error("ERROR ## close the datasource has an error", e);
@@ -142,91 +151,79 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 				});
 
 		// 构建第一层map
-		dataSources = cacheBuilder.build(new CacheLoader<Long, LoadingCache<DataMediaSource, Object>>() {
-			@Override
-			public LoadingCache<DataMediaSource, Object> load(final Long pipelineId) throws Exception {
-				return CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<DataMediaSource, Object>() {
+		dataSources = cacheBuilder.build(new CacheLoader<Long, LoadingCache<DbMediaSource, Object>>() {
 					@Override
-					public Object load(DataMediaSource dataMediaSource) throws Exception {
-						// 扩展功能,可以自定义一些自己实现的 dataSource
-						if (dataMediaSource.getType().isCassandra()) {
-							CassandraMediaSource cassandraMediaSource=(CassandraMediaSource)dataMediaSource;
-							return getCassandraCluster(cassandraMediaSource);
-						} else if (dataMediaSource.getType().isElasticSearch()) {
-							ElasticSearchMediaSource esMediaSource=(ElasticSearchMediaSource)dataMediaSource;
-							return getElasticSearchClient(esMediaSource);
-						} else if (dataMediaSource.getType().isHbase()) {
-							HBaseMediaSource hbMediaSource=(HBaseMediaSource)dataMediaSource;
-							return getHBaseConnection(hbMediaSource);
-						} else if (dataMediaSource.getType().isHDFSArvo()) {
-							HDFSMediaSource hdfsMediaSource=(HDFSMediaSource)dataMediaSource;
-							return getHDFS(hdfsMediaSource);
-						} else if (dataMediaSource.getType().isKafka()) {
-							KafkaMediaSource kafkaMediaSource=(KafkaMediaSource)dataMediaSource;
-							return getKafkaProducer(kafkaMediaSource);
-						} else if (dataMediaSource.getType().isMq()) {
-							MqMediaSource mqMediaSource=(MqMediaSource)dataMediaSource;
-							return getMetaQProducer(mqMediaSource);
-						} else {
-							DbMediaSource dbMediaSource=(DbMediaSource)dataMediaSource;
-							DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
-							if (customDataSource != null) {
-								return customDataSource;
-							}
-							return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
-									dbMediaSource.getPassword(), dbMediaSource.getDriver(), dbMediaSource.getType(),
-									dbMediaSource.getEncode());
-						}
+					public LoadingCache<DbMediaSource, Object> load(Long pipelineId) throws Exception {
+						return CacheBuilder.newBuilder().maximumSize(1000)
+								.build(new CacheLoader<DbMediaSource, Object>() {
+									@Override
+									public Object load(DbMediaSource dbMediaSource) throws Exception {
+										// 扩展功能,可以自定义一些自己实现的 dataSource
+										if (dbMediaSource.getType().isCassandra()) {
+											return getCluster(dbMediaSource);
+										} else if (dbMediaSource.getType().isElasticSearch()) {
+											return getClient(dbMediaSource);
+										} else if (dbMediaSource.getType().isHBase()) {
+											return getHBaseConnection(dbMediaSource);
+										} else if (dbMediaSource.getType().isHDFSArvo()) {
+											return getHDFS(dbMediaSource);
+										} else if (dbMediaSource.getType().isKafka()) {
+											return getProducer(dbMediaSource);
+										} else {
+											DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
+											if (customDataSource != null) {
+												return customDataSource;
+											}
+											return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
+													dbMediaSource.getPassword(), dbMediaSource.getDriver(),
+													dbMediaSource.getType(), dbMediaSource.getEncode());
+										}
+									}
+								});
 					}
-					
+
 				});
-			}
-		});
+
 	}
-	/**
-	 * 建立MetaQ消息生产者
-	 * @param mqMediaSource
-	 * @return
-	 */
-	public com.alibaba.rocketmq.client.producer.MQProducer getMetaQProducer(MqMediaSource mqMediaSource) {
-		com.alibaba.rocketmq.client.producer.DefaultMQProducer producer = new com.alibaba.rocketmq.client.producer.DefaultMQProducer(  
-				mqMediaSource.getProducerGroupName());  
-        //nameserver服务,多个以;分开  
-        producer.setNamesrvAddr(mqMediaSource.getNamesrvAddr());  
-        producer.setInstanceName(mqMediaSource.getInstanceName());  
-        try {
-			producer.start();
-		} catch (MQClientException e) {
-			e.printStackTrace();
-		} 
-        return producer;
+
+	@SuppressWarnings("unchecked")
+	public Object getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
+		Assert.notNull(dataMediaSource);
+		DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
+		try {
+			return dataSources.get(pipelineId).get(dbMediaSource);
+		} catch (ExecutionException e) {
+			return null;
+		}
 	}
-	
+
 	/**
 	 * 获取cassdran的连接
 	 * 
 	 * @param dataMediaSource
 	 * @return
 	 */
-	public com.datastax.driver.core.Cluster getCassandraCluster(CassandraMediaSource cassandraMediaSource) {
-		Assert.notNull(cassandraMediaSource);
-		com.datastax.driver.core.Cluster cluster = null;
-		com.datastax.driver.core.Cluster.Builder builder=com.datastax.driver.core.Cluster.builder();
-		for(ServerPort server:cassandraMediaSource.getServers()){
-			if (server.getPort()>0){
-				builder.addContactPoint(server.getServer()).withPort(server.getPort());
+	public Cluster getCluster(DbMediaSource dbMediaSource) {
+		Assert.notNull(dbMediaSource);
+		Cluster cluster = null;
+		String[] ips=StringUtils.split(dbMediaSource.getUrl(),";");
+		Builder builder=Cluster.builder();
+		for(String ip:ips){
+			String[] ports=StringUtils.split(ip,":");
+			if (ports.length==2){
+				builder.addContactPoint(ports[0]).withPort(NumberUtils.toInt(ports[1],9042));
 			}else{
-				builder.addContactPoint(server.getServer());
+				builder.addContactPoint(ip);
 			}
 		}
-		if (StringUtils.isEmpty(cassandraMediaSource.getUsername())) {
+		if (StringUtils.isEmpty(dbMediaSource.getUsername())) {
 			cluster = builder.build();
 		} else {
-			cluster = builder.withCredentials(cassandraMediaSource.getUsername(), cassandraMediaSource.getPassword()).build();
+			cluster = builder.withCredentials(dbMediaSource.getUsername(), dbMediaSource.getPassword()).build();
 		}
-		com.datastax.driver.core.Metadata metadata = cluster.getMetadata();
+		Metadata metadata = cluster.getMetadata();
 		logger.info("Connected to cluster: %s\n", metadata.getClusterName());
-		for (com.datastax.driver.core.Host host : metadata.getAllHosts()) {
+		for (Host host : metadata.getAllHosts()) {
 			logger.info("Datatacenter: %s; Host: %s; Rack: %s\n", host.getDatacenter(), host.getAddress(),
 					host.getRack());
 		}
@@ -242,9 +239,9 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	 * @return
 	 * @throws IOException
 	 */
-	public org.apache.hadoop.conf.Configuration getConf(String dir, String ugi, String conf) throws IOException {
+	public Configuration getConf(String dir, String ugi, String conf) throws IOException {
 		URI uri = null;
-		org.apache.hadoop.conf.Configuration cfg = null;
+		Configuration cfg = null;
 		String scheme = null;
 		try {
 			uri = new URI(dir);
@@ -252,10 +249,10 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 			if (null == scheme) {
 				throw new IOException("HDFS Path missing scheme, check path begin with hdfs://ip:port/ .");
 			}
-			cfg = new org.apache.hadoop.conf.Configuration();
+			cfg = new Configuration();
 			cfg.setClassLoader(DBDataSourceService.class.getClassLoader());
 			if (!StringUtils.isBlank(conf) && new File(conf).exists()) {
-				cfg.addResource(new org.apache.hadoop.fs.Path(conf));
+				cfg.addResource(new Path(conf));
 			}
 			if (uri.getScheme() != null) {
 				String fsname = String.format("%s://%s:%s", uri.getScheme(), uri.getHost(), uri.getPort());
@@ -277,11 +274,11 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	 * @return
 	 * @throws IOException
 	 */
-	public org.apache.hadoop.fs.FileSystem getHDFS(HDFSMediaSource hdfsMediaSource) throws IOException {
-		Assert.notNull(hdfsMediaSource);
-		String[] urls = StringUtils.split(hdfsMediaSource.getUrl(), "||");
-		org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem.get(getConf(urls[0], hdfsMediaSource.getUsername(), urls[1]));
-		if (fs.exists(new org.apache.hadoop.fs.Path(urls[0]))) {
+	public FileSystem getHDFS(DbMediaSource dbMediaSource) throws IOException {
+		Assert.notNull(dbMediaSource);
+		String[] urls = StringUtils.split(dbMediaSource.getUrl(), "||");
+		FileSystem fs = FileSystem.get(getConf(urls[0], dbMediaSource.getUsername(), urls[1]));
+		if (fs.exists(new Path(urls[0]))) {
 			return fs;
 		}
 		return null;
@@ -294,37 +291,45 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	 * @return
 	 */
 	@SuppressWarnings("rawtypes")
-	public org.apache.kafka.clients.producer.Producer getKafkaProducer(KafkaMediaSource kafkaMediaSource) {
-		Assert.notNull(kafkaMediaSource);
+	public Producer getProducer(DbMediaSource dbMediaSource) {
+		Assert.notNull(dbMediaSource);
 		Properties props = new Properties();
-		if (StringUtils.isNotEmpty(kafkaMediaSource.getBootstrapServers())){
-			props.put("bootstrap.servers",kafkaMediaSource.getBootstrapServers());
-			props.put("metadata.broker.list", kafkaMediaSource.getBootstrapServers());
+		//props.put("bootstrap.servers", dbMediaSource.getUrl());
+//		props.put("zookeeper.connect", dbMediaSource.getUrl());
+		String[] urls=StringUtils.split(dbMediaSource.getUrl(),"|");
+		props.put("bootstrap.servers",urls[0]);
+		if (urls.length==2){
+			props.put("zookeeper.connect",urls[1]);
 		}
-		if (StringUtils.isNotEmpty(kafkaMediaSource.getZookeeperConnect())){
-			props.put("zookeeper.connect",kafkaMediaSource.getZookeeperConnect());
-		}
-		props.put("batch.size", kafkaMediaSource.getBatchSize());
-		props.put("buffer.memory", kafkaMediaSource.getBufferMemory());
-		
-		
+		//props.put("metadata.broker.list", dbMediaSource.getUrl());
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("serializer.class", "kafka.serializer.StringEncoder");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("request.required.acks", "1");
-		
+		props.put("batch.size", 128000);
+		props.put("buffer.memory",  97108864);
 		props.put("compression.type", "gzip"); // 压缩
 		props.put("producer.type", "async");
-		org.apache.kafka.clients.producer.Producer kp = new KafkaProducer(props);
+		// props.put("bootstrap.servers", dbMediaSource.getUrl());
+		// props.put("acks", "all");
+		// props.put("retries", 0);
+		// props.put("batch.size", 16384);
+		// props.put("linger.ms", 1);
+		// props.put("buffer.memory", 33554432);
+		// props.put("key.serializer",
+		// "org.apache.kafka.common.serialization.StringSerializer");
+		// props.put("value.serializer",
+		// "org.apache.kafka.common.serialization.StringSerializer");
+		Producer kp = new KafkaProducer(props);
 		return kp;
 	}
 
-	public org.apache.hadoop.hbase.client.Connection getHBaseConnection(HBaseMediaSource dbMediaSource) throws IOException {
+	public Connection getHBaseConnection(DbMediaSource dbMediaSource) throws IOException {
 		Assert.notNull(dbMediaSource);
-		org.apache.hadoop.conf.Configuration conf = org.apache.hadoop.hbase.HBaseConfiguration.create();
-		conf.addResource(new org.apache.hadoop.fs.Path(dbMediaSource.getHbaseSitePath()));// ddResource(conf.getClass().getResourceAsStream("/hbase-site.xml"));
-		System.setProperty("HADOOP_USER_NAME", dbMediaSource.getUserName());
-		return  org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(conf);
+		Configuration conf = HBaseConfiguration.create();
+		conf.addResource(new Path(dbMediaSource.getUrl()));// ddResource(conf.getClass().getResourceAsStream("/hbase-site.xml"));
+		System.setProperty("HADOOP_USER_NAME", dbMediaSource.getUsername());
+		return ConnectionFactory.createConnection(conf);
 	}
 
 	/**
@@ -333,55 +338,51 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	 * @param dataMediaSource
 	 * @return
 	 */
-	public org.elasticsearch.client.Client getElasticSearchClient(ElasticSearchMediaSource esMediaSource) {
-		Assert.notNull(esMediaSource);
-		org.elasticsearch.client.Client client = null;
-		org.elasticsearch.common.transport.InetSocketTransportAddress[] transportAddress = new org.elasticsearch.common.transport.InetSocketTransportAddress[esMediaSource.getServers().size()];
+	public Client getClient(DbMediaSource dbMediaSource) {
+		Assert.notNull(dbMediaSource);
+		Client client = null;
+		String[] urls = StringUtils.split(dbMediaSource.getUrl(), "||");
+		if (urls.length!=3)return null;
+		String[] hosts = StringUtils.split(urls[0], ";");
 		int id = 0;
-		for(ServerPort server:esMediaSource.getServers()){
+		InetSocketTransportAddress[] transportAddress = new InetSocketTransportAddress[hosts.length];
+		for (String host : hosts) {
+			String[] hp = StringUtils.split(host, ":");
 			try {
-				transportAddress[id]= new org.elasticsearch.common.transport.InetSocketTransportAddress(InetAddress.getByName(server.getServer()),
-						server.getPort());
+				transportAddress[id] = new InetSocketTransportAddress(InetAddress.getByName(hp[0]),
+						NumberUtils.toInt(hp[1], 9300));
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
 			id++;
 		}
-		org.elasticsearch.common.settings.Settings settings = null;
-		if (StringUtils.isNotEmpty(esMediaSource.getUsername())) {
-			settings = org.elasticsearch.common.settings.Settings.settingsBuilder().put("cluster.name",esMediaSource.getClusterName())
-					.put("shield.user", esMediaSource.getUsername() + ":" + esMediaSource.getPassword())
+		Settings settings = null;
+		if (StringUtils.isNotEmpty(dbMediaSource.getUsername())) {
+			settings = Settings.settingsBuilder().put("cluster.name", urls[1])
+					.put("shield.user", dbMediaSource.getUsername() + ":" + dbMediaSource.getPassword())
 					.put("client.transport.sniff", true).build();
-			client = org.elasticsearch.client.transport.TransportClient.builder().addPlugin(org.elasticsearch.shield.ShieldPlugin.class).addPlugin(org.elasticsearch.plugin.deletebyquery.DeleteByQueryPlugin.class)
+			client = TransportClient.builder().addPlugin(ShieldPlugin.class).addPlugin(DeleteByQueryPlugin.class)
 					.settings(settings).build().addTransportAddresses(transportAddress);
 		} else {
-			settings = org.elasticsearch.common.settings.Settings.settingsBuilder().put("cluster.name", esMediaSource.getClusterName())
+			settings = Settings.settingsBuilder().put("cluster.name", urls[1])
 					.put("client.transport.sniff", true).build();
-			client = org.elasticsearch.client.transport.TransportClient.builder().addPlugin(org.elasticsearch.plugin.deletebyquery.DeleteByQueryPlugin.class).settings(settings).build()
+			client = TransportClient.builder().addPlugin(DeleteByQueryPlugin.class).settings(settings).build()
 					.addTransportAddresses(transportAddress);
 		}
-		org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse response = client.admin().indices().prepareExists(esMediaSource.getIndexName()).execute().actionGet();
+		IndicesExistsResponse response = client.admin().indices().prepareExists(urls[2]).execute().actionGet();
 		if (!response.isExists()) {
 			return null;
 		}
 		return client;
 	}
 
-	@SuppressWarnings("unchecked")
-	public Object getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
-		Assert.notNull(dataMediaSource);
-		DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
-		try {
-			return dataSources.get(pipelineId).get(dbMediaSource);
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
+	/**
+	 * 关闭各种连接
+	 */
 	public void destroy(Long pipelineId) {
 		try {
-			LoadingCache<DataMediaSource, Object> sources = dataSources.get(pipelineId);
+			LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+			// invalidate(pipelineId);
 			if (sources != null) {
 				for (Object dbconn : sources.asMap().values()) {
 					try {
@@ -390,17 +391,32 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 							// for filter to destroy custom datasource
 							if (letHandlerDestroyIfSupport(pipelineId, source)) {
 								continue;
-							}
-							// fallback for regular destroy
-							// TODO need to integrate to handler
+							} // fallback for regular destroy TODO need to
+								// integrate to handler
 							BasicDataSource basicDataSource = (BasicDataSource) source;
 							basicDataSource.close();
+						} else if (dbconn instanceof Client) {
+							Client client = (Client) dbconn;
+							client.close();
+						} else if (dbconn instanceof Connection) {
+							Connection hbaseconn = (Connection) dbconn;
+							hbaseconn.close();
+						} else if (dbconn instanceof Producer) {
+							Producer producer = (Producer) dbconn;
+							producer.close();
+						} else if (dbconn instanceof Cluster) {
+							Cluster cluster = (Cluster) dbconn;
+							cluster.close();
+						} else if (dbconn instanceof FileSystem) {
+							FileSystem filesystem = (FileSystem) dbconn;
+							filesystem.close();
 						}
 					} catch (SQLException e) {
 						logger.error("ERROR ## close the datasource has an error", e);
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
 				}
-
 				sources.invalidateAll();
 				sources.cleanUp();
 			}
@@ -428,18 +444,25 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	}
 
 	public void destroy() throws Exception {
-		for (Long pipelineId : dataSources.asMap().keySet()) {
-			destroy(pipelineId);
-		}
+		dataSources.invalidateAll();
+		dataSources.cleanUp();
+
+		// for (Long pipelineId : dataSources.keySet()) {
+		// destroy(pipelineId);
+		// }
 	}
 
 	private DataSource createDataSource(String url, String userName, String password, String driverClassName,
 			DataMediaType dataMediaType, String encoding) {
 		BasicDataSource dbcpDs = new BasicDataSource();
-
 		dbcpDs.setInitialSize(initialSize);// 初始化连接池时创建的连接数
-		dbcpDs.setMaxActive(maxActive);// 连接池允许的最大并发连接数，值为非正数时表示不限制
-		dbcpDs.setMaxIdle(maxIdle);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
+		if (dataMediaType.isGreenPlum()){
+			dbcpDs.setMaxActive(maxActive*2);// 连接池允许的最大并发连接数，值为非正数时表示不限制
+			dbcpDs.setMaxIdle(maxIdle*2);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
+		}else{
+			dbcpDs.setMaxActive(maxActive);// 连接池允许的最大并发连接数，值为非正数时表示不限制
+			dbcpDs.setMaxIdle(maxIdle);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
+		}
 		dbcpDs.setMinIdle(minIdle);// 连接池中的最小空闲连接数，低于此数值时将会创建所欠缺的连接，值为0时表示不创建
 		dbcpDs.setMaxWait(maxWait);// 以毫秒表示的当连接池中没有可用连接时等待可用连接返回的时间，超时则抛出异常，值为-1时表示无限等待
 		dbcpDs.setRemoveAbandoned(true);// 是否清除已经超过removeAbandonedTimeout设置的无效连接
@@ -543,5 +566,50 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 
 	public void setDataSourceHandlers(List<DataSourceHanlder> dataSourceHandlers) {
 		this.dataSourceHandlers = dataSourceHandlers;
+	}
+
+	@Override
+	public void destroy(Long pipelineId, DbMediaSource source) {
+		try {
+			LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+			// invalidate(pipelineId);
+			if (sources != null) {
+				Object dbconn = sources.get(source);
+				try {
+					if (dbconn instanceof DataSource) {
+						DataSource dsource = (DataSource) dbconn;
+						// for filter to destroy custom datasource
+						if (!letHandlerDestroyIfSupport(pipelineId, dsource)) {
+							BasicDataSource basicDataSource = (BasicDataSource) dsource;
+							basicDataSource.close();
+						}
+					} else if (dbconn instanceof Client) {
+						Client client = (Client) dbconn;
+						client.close();
+					} else if (dbconn instanceof Connection) {
+						Connection hbaseconn = (Connection) dbconn;
+						hbaseconn.close();
+					} else if (dbconn instanceof Producer) {
+						Producer producer = (Producer) dbconn;
+						producer.close();
+					} else if (dbconn instanceof Cluster) {
+						Cluster cluster = (Cluster) dbconn;
+						cluster.close();
+					} else if (dbconn instanceof FileSystem) {
+						FileSystem filesystem = (FileSystem) dbconn;
+						filesystem.close();
+					}
+				} catch (SQLException e) {
+					logger.error("ERROR ## close the datasource has an error", e);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}finally{
+					sources.invalidate(source);
+				}
+			}
+		} catch (ExecutionException e1) {
+			e1.printStackTrace();
+		}
+
 	}
 }

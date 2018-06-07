@@ -21,6 +21,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.StringUtils;
@@ -29,6 +30,7 @@ import org.apache.ddlutils.model.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -38,13 +40,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 import com.alibaba.otter.node.etl.common.datasource.DataSourceService;
+import com.alibaba.otter.node.etl.common.db.dialect.greenplum.GreenPlumDialect;
 import com.alibaba.otter.shared.common.utils.meta.DdlUtils;
 import com.alibaba.otter.shared.common.utils.meta.DdlUtilsFilter;
+import com.alibaba.otter.shared.etl.model.EventData;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
+
 
 /**
  * @author jianghang 2011-10-27 下午01:50:19
@@ -52,183 +57,178 @@ import com.google.common.cache.RemovalNotification;
  */
 public abstract class AbstractDbDialect implements DbDialect {
 
-	protected static final Logger logger = LoggerFactory.getLogger(AbstractDbDialect.class);
-	protected int databaseMajorVersion;
-	protected int databaseMinorVersion;
-	protected String databaseName;
-	protected DataSourceService dataSourceService;
-	protected SqlTemplate sqlTemplate;
-	protected JdbcTemplate jdbcTemplate;
-	protected TransactionTemplate transactionTemplate;
-	protected LobHandler lobHandler;
-	protected LoadingCache<List<String>, Table> tables;
+    protected static final Logger      logger = LoggerFactory.getLogger(AbstractDbDialect.class);
+    protected int                      databaseMajorVersion;
+    protected int                      databaseMinorVersion;
+    protected String                   databaseName;
+    protected DataSourceService        dataSourceService;
+    protected SqlTemplate              sqlTemplate;
+    protected JdbcTemplate             jdbcTemplate;
+    protected TransactionTemplate      transactionTemplate;
+    protected LobHandler               lobHandler;
+    protected LoadingCache<List<String>, Table> tables;
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public AbstractDbDialect(final JdbcTemplate jdbcTemplate, LobHandler lobHandler) {
-		this.jdbcTemplate = jdbcTemplate;
-		this.lobHandler = lobHandler;
-		// 初始化transction
-		this.transactionTemplate = new TransactionTemplate();
-		transactionTemplate.setTransactionManager(new DataSourceTransactionManager(jdbcTemplate.getDataSource()));
-		transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    public AbstractDbDialect(final JdbcTemplate jdbcTemplate, LobHandler lobHandler){
+        this.jdbcTemplate = jdbcTemplate;
+        this.lobHandler = lobHandler;
+        // 初始化transction
+        this.transactionTemplate = new TransactionTemplate();
+        transactionTemplate.setTransactionManager(new DataSourceTransactionManager(jdbcTemplate.getDataSource()));
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-		// 初始化一些数据
-		jdbcTemplate.execute(new ConnectionCallback() {
+        // 初始化一些数据
+        jdbcTemplate.execute(new ConnectionCallback() {
 
-			public Object doInConnection(Connection c) throws SQLException, DataAccessException {
-				DatabaseMetaData meta = c.getMetaData();
-				databaseName = meta.getDatabaseProductName();
-				databaseMajorVersion = meta.getDatabaseMajorVersion();
-				databaseMinorVersion = meta.getDatabaseMinorVersion();
+            public Object doInConnection(Connection c) throws SQLException, DataAccessException {
+                DatabaseMetaData meta = c.getMetaData();
+                databaseName = meta.getDatabaseProductName();
+                databaseMajorVersion = meta.getDatabaseMajorVersion();
+                databaseMinorVersion = meta.getDatabaseMinorVersion();
 
-				return null;
-			}
-		});
+                return null;
+            }
+        });
 
-		initTables(jdbcTemplate);
-	}
+        initTables(jdbcTemplate);
+    }
 
-	public AbstractDbDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler, String name, int majorVersion,
-			int minorVersion) {
-		this.jdbcTemplate = jdbcTemplate;
-		this.lobHandler = lobHandler;
-		// 初始化transction
-		this.transactionTemplate = new TransactionTemplate();
-		transactionTemplate.setTransactionManager(new DataSourceTransactionManager(jdbcTemplate.getDataSource()));
-		transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    public AbstractDbDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler, String name, int majorVersion,
+                             int minorVersion){
+        this.jdbcTemplate = jdbcTemplate;
+        this.lobHandler = lobHandler;
+        // 初始化transction
+        this.transactionTemplate = new TransactionTemplate();
+        transactionTemplate.setTransactionManager(new DataSourceTransactionManager(jdbcTemplate.getDataSource()));
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-		this.databaseName = name;
-		this.databaseMajorVersion = majorVersion;
-		this.databaseMinorVersion = minorVersion;
+        this.databaseName = name;
+        this.databaseMajorVersion = majorVersion;
+        this.databaseMinorVersion = minorVersion;
 
-		initTables(jdbcTemplate);
-	}
+        initTables(jdbcTemplate);
+    }
 
-	public Table findTable(String schema, String table, boolean useCache) {
-		List<String> key = Arrays.asList(schema, table);
-		if (useCache == false) {
-			tables.invalidate(key);
-		}
-		try {
+    public Table findTable(String schema, String table, boolean useCache) {
+    	List<String> key = Arrays.asList(schema, table);
+        if (useCache == false) {
+            tables.invalidate(key);
+        }
+        try {
 			return tables.get(key);
-		} catch (ExecutionException e) {
-			e.printStackTrace();
+		}catch (ExecutionException e) {
 			return null;
 		}
-	}
-
-	public Table findTable(String schema, String table) {
-		return findTable(schema, table, true);
-	}
-	
-	public boolean isNoSqlDB(){
+    }
+    
+    public boolean isNoSqlDB(){
 		return false;
 	}
 
-	public void reloadTable(String schema, String table) {
-		if (StringUtils.isNotEmpty(table)) {
-			tables.invalidate(Arrays.asList(schema, table));
-		} else {
-			// 如果没有存在表名，则直接清空所有的table，重新加载
-			tables.invalidateAll();
-			tables.cleanUp();
-		}
-	}
+    public Table findTable(String schema, String table) {
+        return findTable(schema, table, true);
+    }
 
-	public String getName() {
-		return databaseName;
-	}
+    public void reloadTable(String schema, String table) {
+        if (StringUtils.isNotEmpty(table)) {
+            tables.invalidateAll(Arrays.asList(schema, table));
+        } else {
+            // 如果没有存在表名，则直接清空所有的table，重新加载
+        	tables.invalidateAll();
+            tables.cleanUp();
+        }
+    }
 
-	public int getMajorVersion() {
-		return databaseMajorVersion;
-	}
+    public String getName() {
+        return databaseName;
+    }
 
-	@Override
-	public int getMinorVersion() {
-		return databaseMinorVersion;
-	}
+    public int getMajorVersion() {
+        return databaseMajorVersion;
+    }
 
-	public String getVersion() {
-		return databaseMajorVersion + "." + databaseMinorVersion;
-	}
+    @Override
+    public int getMinorVersion() {
+        return databaseMinorVersion;
+    }
 
-	public LobHandler getLobHandler() {
-		return lobHandler;
-	}
+    public String getVersion() {
+        return databaseMajorVersion + "." + databaseMinorVersion;
+    }
 
-	public JdbcTemplate getJdbcTemplate() {
-		return jdbcTemplate;
-	}
+    public LobHandler getLobHandler() {
+        return lobHandler;
+    }
 
-	public TransactionTemplate getTransactionTemplate() {
-		return transactionTemplate;
-	}
+    public JdbcTemplate getJdbcTemplate() {
+        return jdbcTemplate;
+    }
 
-	public SqlTemplate getSqlTemplate() {
-		return sqlTemplate;
-	}
+    public TransactionTemplate getTransactionTemplate() {
+        return transactionTemplate;
+    }
 
-	public boolean isDRDS() {
-		return false;
-	}
+    public SqlTemplate getSqlTemplate() {
+        return sqlTemplate;
+    }
 
-	public String getShardColumns(String schema, String table) {
-		return null;
-	}
+    public void destory() {
+    }
 
-	public void destory() {
-	}
+    // ================================ helper method ==========================
 
-	// ================================ helper method ==========================
+    private void initTables(final JdbcTemplate jdbcTemplate) {
+        // soft引用设置，避免内存爆了
+    	com.google.common.cache.Cache<List<String>, Table> mapMaker = CacheBuilder.newBuilder().maximumSize(1000).softValues()
+        		.removalListener(new RemovalListener<List<String>, Table>(){
+			@Override
+			public void onRemoval(RemovalNotification<List<String>, Table> paramRemovalNotification) {
+				logger.warn("Eviction For Table:" + paramRemovalNotification.getValue());
+			}}).build();
 
-	@SuppressWarnings("unchecked")
-	private void initTables(final JdbcTemplate jdbcTemplate) {
-		// soft引用设置，避免内存爆了
-		CacheBuilder<List<String>, Table> mapMaker = CacheBuilder.newBuilder().maximumSize(1000).softValues()
-				.removalListener(new RemovalListener<List<String>, Table>() {
-
-					@Override
-					public void onRemoval(RemovalNotification<List<String>, Table> notification) {
-						logger.warn("Eviction For Table:" + notification.getValue());
-
-					}
-				});
-
-		this.tables = mapMaker.build(new CacheLoader<List<String>, Table>() {
-
-			public Table load(List<String> names) {
+        this.tables =CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<List<String>, Table>(){
+			@Override
+			public Table load(List<String> names) throws Exception {
 				Assert.isTrue(names.size() == 2);
-				try {
-					beforeFindTable(jdbcTemplate, names.get(0), names.get(0), names.get(1));
-					DdlUtilsFilter filter = getDdlUtilsFilter(jdbcTemplate, names.get(0), names.get(0), names.get(1));
-					Table table = DdlUtils.findTable(jdbcTemplate, names.get(0), names.get(0), names.get(1), filter);
-					afterFindTable(table, jdbcTemplate, names.get(0), names.get(0), names.get(1));
-					if (table == null) {
-						throw new NestableRuntimeException(
-								"no found table [" + names.get(0) + "." + names.get(1) + "] , pls check");
-					} else {
-						return table;
-					}
-				} catch (Exception e) {
-					throw new NestableRuntimeException("find table [" + names.get(0) + "." + names.get(1) + "] error",
-							e);
-				}
-			}
-		});
-	}
+                try {
+                	Table table =null;
+                	if (databaseName.equalsIgnoreCase("greenplum")){
+                		String[] sts=StringUtils.split(names.get(1),".");
+                		 beforeFindTable(jdbcTemplate, names.get(0), sts[0], sts[1]);
+                         DdlUtilsFilter filter = getDdlUtilsFilter(jdbcTemplate, names.get(0), sts[0], sts[1]);
+                         table = DdlUtils.findTable(jdbcTemplate, names.get(0), sts[0], sts[1], filter);
+                         afterFindTable(table, jdbcTemplate, names.get(0), sts[0], sts[1]);
+                	}else{
+                		 beforeFindTable(jdbcTemplate, names.get(0), names.get(0), names.get(1));
+                         DdlUtilsFilter filter = getDdlUtilsFilter(jdbcTemplate, names.get(0), names.get(0), names.get(1));
+                         table = DdlUtils.findTable(jdbcTemplate, names.get(0), names.get(0), names.get(1), filter);
+                         afterFindTable(table, jdbcTemplate, names.get(0), names.get(0), names.get(1));
+                    }
+                   if (table == null) {
+                        throw new NestableRuntimeException("no found table [" + names.get(0) + "." + names.get(1) + "] , pls check");
+                    } else {
+                        return table;
+                    }
+                }catch(CannotGetJdbcConnectionException gce){
+                	throw gce;
+                } catch (Exception e) {
+                    throw new NestableRuntimeException("find table [" + names.get(0) + "." + names.get(1) + "] error",
+                        e);
+                }
+			}});
+    }
 
-	protected DdlUtilsFilter getDdlUtilsFilter(JdbcTemplate jdbcTemplate, String catalogName, String schemaName,
-			String tableName) {
-		// we need to return null for backward compatibility
-		return null;
-	}
+    protected DdlUtilsFilter getDdlUtilsFilter(JdbcTemplate jdbcTemplate, String catalogName, String schemaName,
+                                               String tableName) {
+        // we need to return null for backward compatibility
+        return null;
+    }
 
-	protected void beforeFindTable(JdbcTemplate jdbcTemplate, String catalogName, String schemaName, String tableName) {
-		// for subclass to extend
-	}
+    protected void beforeFindTable(JdbcTemplate jdbcTemplate, String catalogName, String schemaName, String tableName) {
+        // for subclass to extend
+    }
 
-	protected void afterFindTable(Table table, JdbcTemplate jdbcTemplate, String catalogName, String schemaName,
-			String tableName) {
-		// for subclass to extend
-	}
+    protected void afterFindTable(Table table, JdbcTemplate jdbcTemplate, String catalogName, String schemaName,
+                                  String tableName) {
+        // for subclass to extend
+    }
 }

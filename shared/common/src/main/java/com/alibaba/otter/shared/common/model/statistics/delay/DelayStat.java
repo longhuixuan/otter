@@ -30,33 +30,33 @@ import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
  */
 public class DelayStat implements Serializable {
 
-    private static final long serialVersionUID = -1350200637109107904L;
-    private Long              id;
-    private Long              pipelineId;
-    private Long              delayNumber;                             // 延迟数量
-    private Long              delayTime;                               // 延迟时间
-    private Long minDelayTime;
+	private static final long serialVersionUID = -1350200637109107904L;
+	private Long id;
+	private Long pipelineId;
+	private Long delayNumber; // 延迟数量
+	private Long delayTime; // 延迟时间
+	private Long minDelayTime;
 	private Long maxDelayTime;
-    private Date              gmtCreate;
-    private Date              gmtModified;
+	private Date gmtCreate;
+	private Date gmtModified;
 
-    public Long getId() {
-        return id;
-    }
+	public Long getId() {
+		return id;
+	}
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+	public void setId(Long id) {
+		this.id = id;
+	}
 
-    public Long getPipelineId() {
-        return pipelineId;
-    }
+	public Long getPipelineId() {
+		return pipelineId;
+	}
 
-    public void setPipelineId(Long pipelineId) {
-        this.pipelineId = pipelineId;
-    }
+	public void setPipelineId(Long pipelineId) {
+		this.pipelineId = pipelineId;
+	}
 
-    public Long getMinDelayTime() {
+	public Long getMinDelayTime() {
 		return minDelayTime;
 	}
 
@@ -73,40 +73,40 @@ public class DelayStat implements Serializable {
 	}
 
 	public Long getDelayNumber() {
-        return delayNumber;
-    }
+		return delayNumber;
+	}
 
-    public void setDelayNumber(Long delayNumber) {
-        this.delayNumber = delayNumber;
-    }
+	public void setDelayNumber(Long delayNumber) {
+		this.delayNumber = delayNumber;
+	}
 
-    public Long getDelayTime() {
-        return delayTime;
-    }
+	public Long getDelayTime() {
+		return delayTime;
+	}
 
-    public void setDelayTime(Long delayTime) {
-        this.delayTime = delayTime;
-    }
+	public void setDelayTime(Long delayTime) {
+		this.delayTime = delayTime;
+	}
 
-    public Date getGmtCreate() {
-        return gmtCreate;
-    }
+	public Date getGmtCreate() {
+		return gmtCreate;
+	}
 
-    public void setGmtCreate(Date gmtCreate) {
-        this.gmtCreate = gmtCreate;
-    }
+	public void setGmtCreate(Date gmtCreate) {
+		this.gmtCreate = gmtCreate;
+	}
 
-    public Date getGmtModified() {
-        return gmtModified;
-    }
+	public Date getGmtModified() {
+		return gmtModified;
+	}
 
-    public void setGmtModified(Date gmtModified) {
-        this.gmtModified = gmtModified;
-    }
+	public void setGmtModified(Date gmtModified) {
+		this.gmtModified = gmtModified;
+	}
 
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this, OtterToStringStyle.DEFAULT_STYLE);
-    }
+	@Override
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this, OtterToStringStyle.DEFAULT_STYLE);
+	}
 
 }

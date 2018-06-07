@@ -12,6 +12,6 @@ public class addDataSource {
     private DataMediaSourceService dataMediaSourceService;
 
     public void execute( Context context, Navigator nav) throws Exception {
-    	context.put("DataMediaSourceTypes",dataMediaSourceService.getDataMediaSourceTypes());
+//    	context.put("DataMediaSourceTypes",dataMediaSourceService.getDataMediaSourceTypes());
     }
 }

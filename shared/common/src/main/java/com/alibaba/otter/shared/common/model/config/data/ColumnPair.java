@@ -62,6 +62,8 @@ public class ColumnPair implements Serializable {
     public void setId(Long id) {
         this.id = id;
     }
+    
+    
 
     public Integer getIsPk() {
 		return isPk;

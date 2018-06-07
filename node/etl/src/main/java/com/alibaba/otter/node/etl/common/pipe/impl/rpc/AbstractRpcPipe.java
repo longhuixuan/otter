@@ -16,8 +16,6 @@
 
 package com.alibaba.otter.node.etl.common.pipe.impl.rpc;
 
-import java.util.concurrent.TimeUnit;
-
 import org.springframework.beans.factory.InitializingBean;
 
 import com.alibaba.otter.node.etl.common.pipe.Pipe;
@@ -46,14 +44,13 @@ public abstract class AbstractRpcPipe<T, KEY extends RpcPipeKey> implements Pipe
     protected LoadingCache<RpcPipeKey, DbBatch> cache;
 
     public void afterPropertiesSet() throws Exception {
-        cache = CacheBuilder.newBuilder().maximumSize(1000).expireAfterWrite(timeout, TimeUnit.MILLISECONDS).softValues().build(new CacheLoader<RpcPipeKey, DbBatch>(){
-
+        cache =CacheBuilder.newBuilder().maximumSize(1000).softValues().build(new CacheLoader<RpcPipeKey, DbBatch>() {
 			@Override
-			public DbBatch load(RpcPipeKey key) throws Exception {
+			public DbBatch load(RpcPipeKey pipekey) throws Exception {
 				return new DbBatch();
 			}
-        	
-        });
+
+		}); //new MapMaker().expireAfterWrite(timeout, TimeUnit.MILLISECONDS).softValues().makeMap();
     }
 
     // rpc get操作事件

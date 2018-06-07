@@ -23,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 import com.alibaba.otter.node.etl.common.db.dialect.DbDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.DbDialectFactory;
 import com.alibaba.otter.node.etl.common.db.dialect.SqlTemplate;
+import com.alibaba.otter.node.etl.common.db.dialect.greenplum.GreenPlumSqlTemplate;
 import com.alibaba.otter.node.etl.common.db.dialect.oracle.OracleSqlTemplate;
 import com.alibaba.otter.node.etl.load.loader.db.context.DbLoadContext;
 import com.alibaba.otter.node.etl.load.loader.interceptor.AbstractLoadInterceptor;
@@ -43,42 +44,38 @@ public class SqlBuilderLoadInterceptor extends AbstractLoadInterceptor<DbLoadCon
 
     public boolean before(DbLoadContext context, EventData currentData) {
         // 初步构建sql
-        DbDialect dbDialect = dbDialectFactory.getDbDialect(context.getIdentity().getPipelineId(),
-            (DbMediaSource) context.getDataMediaSource());
-        SqlTemplate sqlTemplate = dbDialect.getSqlTemplate();
+    	DbMediaSource source=(DbMediaSource) context.getDataMediaSource();
+        DbDialect dbDialect = dbDialectFactory.getDbDialect(context.getIdentity().getPipelineId(),source);
+        //增加es等nosql处理
+        if (source.getType().isCassandra() ||source.getType().isElasticSearch() ||source.getType().isHBase()
+        		||source.getType().isKafka()||source.getType().isHDFSArvo()){
+        	return false;
+        }
         EventType type = currentData.getEventType();
         String sql = null;
-
         String schemaName = (currentData.isWithoutSchema() ? null : currentData.getSchemaName());
+        SqlTemplate sqlTemplate = dbDialect.getSqlTemplate();
         // 注意insert/update语句对应的字段数序都是将主键排在后面
         if (type.isInsert()) {
-            if (CollectionUtils.isEmpty(currentData.getColumns()) && sqlTemplate instanceof OracleSqlTemplate) { // 如果表为全主键，直接进行insert
-                                                                                                                 // sql
+            if (CollectionUtils.isEmpty(currentData.getColumns())  && sqlTemplate instanceof OracleSqlTemplate ) { // 如果表为全主键，直接进行insert  sql
                 sql = sqlTemplate.getInsertSql(schemaName,
                     currentData.getTableName(),
                     buildColumnNames(currentData.getKeys()),
                     buildColumnNames(currentData.getColumns()));
+            }else if (sqlTemplate instanceof GreenPlumSqlTemplate){
+            	sql = sqlTemplate.getInsertSql(schemaName,
+                        currentData.getTableName(),
+                        buildColumnNames(currentData.getKeys()),
+                        buildColumnNames(currentData.getColumns()));
             } else {
                 sql = sqlTemplate.getMergeSql(schemaName,
                     currentData.getTableName(),
                     buildColumnNames(currentData.getKeys()),
                     buildColumnNames(currentData.getColumns()),
-                    new String[] {},
-                    !dbDialect.isDRDS());
+                    new String[] {});
             }
         } else if (type.isUpdate()) {
-            // String[] keyColumns = buildColumnNames(currentData.getKeys());
-            // String[] otherColumns =
-            // buildColumnNames(currentData.getUpdatedColumns());
-            // boolean existOldKeys = false;
-            // for (String key : keyColumns) {
-            // // 找一下otherColumns是否有主键，存在就代表有主键变更
-            // if (ArrayUtils.contains(otherColumns, key)) {
-            // existOldKeys = true;
-            // break;
-            // }
-            // }
-
+            
             boolean existOldKeys = !CollectionUtils.isEmpty(currentData.getOldKeys());
             boolean rowMode = context.getPipeline().getParameters().getSyncMode().isRow();
             String[] keyColumns = null;
@@ -98,8 +95,7 @@ public class SqlBuilderLoadInterceptor extends AbstractLoadInterceptor<DbLoadCon
                     currentData.getTableName(),
                     keyColumns,
                     otherColumns,
-                    new String[] {},
-                    !dbDialect.isDRDS());
+                    new String[] {});
             } else {// 否则进行update sql
                 sql = sqlTemplate.getUpdateSql(schemaName, currentData.getTableName(), keyColumns, otherColumns);
             }

@@ -34,70 +34,77 @@ import com.google.common.cache.LoadingCache;
  */
 public class SubscribeManagerFactory implements ApplicationContextAware {
 
-	private static ApplicationContext context = null;
+    private static ApplicationContext                         context        = null;
 
-	private static final LoadingCache<SubscribeType, SubscribeManager> innerContainer = CacheBuilder.newBuilder()
-			.maximumSize(1000).build(new CacheLoader<SubscribeType, SubscribeManager>() {
-
+    private static final LoadingCache<SubscribeType, SubscribeManager> innerContainer =
+    		CacheBuilder.newBuilder().maximumSize(1000)
+			.build(new CacheLoader<SubscribeType, SubscribeManager>() {
 				@Override
-				public SubscribeManager load(SubscribeType input) {
+				public SubscribeManager load(SubscribeType input) throws Exception {
 					return createSubsrcibeManager(input);
-				}
-			});
+				}});
+    
+//    		new MapMaker().makeComputingMap(new Function<SubscribeType, SubscribeManager>() {
+//
+//                                                                                 @Override
+//                                                                                 public SubscribeManager apply(SubscribeType input) {
+//                                                                                     return createSubsrcibeManager(input);
+//                                                                                 }
+//                                                                             });
 
-	private static SubscribeManager createSubsrcibeManager(SubscribeType type) {
-		SubscribeManager manager = null;
-		if (SubscribeType.MEDIA.equals(type)) {
-			manager = new MediaSubscribeManager();
-			autowire(manager);
-		} else {
-			throw new PushException("can't createSubsrcibeManager, type : " + type + " is not supported yet");
-		}
+    private static SubscribeManager createSubsrcibeManager(SubscribeType type) {
+        SubscribeManager manager = null;
+        if (SubscribeType.MEDIA.equals(type)) {
+            manager = new MediaSubscribeManager();
+            autowire(manager);
+        } else {
+            throw new PushException("can't createSubsrcibeManager, type : " + type + " is not supported yet");
+        }
 
-		manager.init();
-		addShutdownForManager(manager);
-		return manager;
-	}
+        manager.init();
+        addShutdownForManager(manager);
+        return manager;
+    }
 
-	private static void addShutdownForManager(final SubscribeManager manager) {
-		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+    private static void addShutdownForManager(final SubscribeManager manager) {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 
-			@Override
-			public void run() {
-				manager.shutdown();
-			}
-		}));
-	}
+            @Override
+            public void run() {
+                manager.shutdown();
+            }
+        }));
+    }
 
-	/**
-	 * 根据订阅类型获取相应的订阅管理器。每个订阅类型对应一个单例的订阅管理器。<br/>
-	 * 
-	 * @param type
-	 * @return 订阅管理器
-	 * @see SubscribeManager
-	 * @see SubscribeType
-	 */
-	public static SubscribeManager getSubscribeManager(SubscribeType type) {
-		if (type == null) {
-			return null;
-		}
+    /**
+     * 根据订阅类型获取相应的订阅管理器。每个订阅类型对应一个单例的订阅管理器。<br/>
+     * 
+     * @param type
+     * @return 订阅管理器
+     * @see SubscribeManager
+     * @see SubscribeType
+     */
+    public static SubscribeManager getSubscribeManager(SubscribeType type) {
+        if (type == null) {
+            return null;
+        }
+        SubscribeManager manager=null;
 		try {
-			SubscribeManager manager = (SubscribeManager) innerContainer.get(type);
-			return manager;
+			manager = (SubscribeManager) innerContainer.get(type);
 		} catch (ExecutionException e) {
 			e.printStackTrace();
-			return null;
 		}
+        return manager;
+    }
 
-	}
+    public static void autowire(Object obj) {
+        // 重新注入一下对象
+        context.getAutowireCapableBeanFactory().autowireBeanProperties(obj,
+                                                                       AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
+                                                                       true);
+    }
 
-	public static void autowire(Object obj) {
-		// 重新注入一下对象
-		context.getAutowireCapableBeanFactory().autowireBeanProperties(obj, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
-				true);
-	}
-
-	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-		context = applicationContext;
-	}
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        context = applicationContext;
+    }
 }

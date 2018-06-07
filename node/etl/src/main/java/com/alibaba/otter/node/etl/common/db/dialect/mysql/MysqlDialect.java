@@ -16,23 +16,10 @@
 
 package com.alibaba.otter.node.etl.common.db.dialect.mysql;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.NestableRuntimeException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.lob.LobHandler;
-import org.springframework.util.Assert;
 
 import com.alibaba.otter.node.etl.common.db.dialect.AbstractDbDialect;
-import com.alibaba.otter.shared.common.utils.meta.DdlUtils;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
 
 /**
  * 基于mysql的一些特殊处理定义
@@ -42,94 +29,39 @@ import com.google.common.cache.RemovalNotification;
  */
 public class MysqlDialect extends AbstractDbDialect {
 
-	private boolean isDRDS = false;
-	private LoadingCache<List<String>, String> shardColumns;
+    public MysqlDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler){
+        super(jdbcTemplate, lobHandler);
+        sqlTemplate = new MysqlSqlTemplate();
+    }
 
-	public MysqlDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler) {
-		super(jdbcTemplate, lobHandler);
-		sqlTemplate = new MysqlSqlTemplate();
-	}
+    public MysqlDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler, String name, int majorVersion,
+                        int minorVersion){
+        super(jdbcTemplate, lobHandler, name, majorVersion, minorVersion);
+        sqlTemplate = new MysqlSqlTemplate();
+    }
 
-	public MysqlDialect(JdbcTemplate jdbcTemplate, LobHandler lobHandler, String name, String databaseVersion,
-			int majorVersion, int minorVersion) {
-		super(jdbcTemplate, lobHandler, name, majorVersion, minorVersion);
-		sqlTemplate = new MysqlSqlTemplate();
+    public boolean isCharSpacePadded() {
+        return false;
+    }
 
-		if (StringUtils.contains(databaseVersion, "-TDDL-")) {
-			isDRDS = true;
-			initShardColumns();
-		}
-	}
+    public boolean isCharSpaceTrimmed() {
+        return true;
+    }
 
-	private void initShardColumns() {
-		// soft引用设置，避免内存爆了
-		CacheBuilder<List<String>, String> mapMaker = CacheBuilder.newBuilder().maximumSize(1000).softValues()
-				.removalListener(new RemovalListener<List<String>, String>() {
-					@Override
-					public void onRemoval(RemovalNotification<List<String>, String> notification) {
-						logger.warn("Eviction For Table:" + notification.getValue());
+    public boolean isEmptyStringNulled() {
+        return false;
+    }
 
-					}
-				});
+    public boolean isSupportMergeSql() {
+        return true;
+    }
 
-		this.shardColumns = mapMaker.build(new CacheLoader<List<String>, String>() {
+    public String getDefaultSchema() {
+        return null;
+    }
 
-			public String load(List<String> names) {
-				Assert.isTrue(names.size() == 2);
-				try {
-					String result = DdlUtils.getShardKeyByDRDS(jdbcTemplate, names.get(0), names.get(0), names.get(1));
-					if (StringUtils.isEmpty(result)) {
-						return "";
-					} else {
-						return result;
-					}
-				} catch (Exception e) {
-					throw new NestableRuntimeException("find table [" + names.get(0) + "." + names.get(1) + "] error",
-							e);
-				}
-			}
-		});
-	}
-
-	public boolean isCharSpacePadded() {
-		return false;
-	}
-
-	public boolean isCharSpaceTrimmed() {
-		return true;
-	}
-
-	public boolean isEmptyStringNulled() {
-		return false;
-	}
-
-	public boolean isSupportMergeSql() {
-		return true;
-	}
-
-	public String getDefaultSchema() {
-		return null;
-	}
-
-	public boolean isDRDS() {
-		return isDRDS;
-	}
-
-	public String getShardColumns(String schema, String table) {
-		if (isDRDS()) {
-			try {
-				return shardColumns.get(Arrays.asList(schema, table));
-			} catch (ExecutionException e) {
-				e.printStackTrace();
-				return null;
-			}
-		} else {
-			return null;
-		}
-	}
-
-	public String getDefaultCatalog() {
-		return (String) jdbcTemplate.queryForObject("select database()", String.class);
-	}
+    public String getDefaultCatalog() {
+        return (String) jdbcTemplate.queryForObject("select database()", String.class);
+    }
 
 }

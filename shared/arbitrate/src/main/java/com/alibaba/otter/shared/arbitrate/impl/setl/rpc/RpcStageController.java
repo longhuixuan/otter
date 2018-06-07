@@ -59,7 +59,8 @@ public class RpcStageController extends ArbitrateLifeCycle implements ProcessLis
 
 		replys = CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<StageType, ReplyProcessQueue>() {
 
-			public ReplyProcessQueue load(StageType input) {
+			@Override
+			public ReplyProcessQueue load(StageType input) throws Exception {
 				int size = ArbitrateConfigUtils.getParallelism(getPipelineId()) * 10;
 				if (size < 100) {
 					size = 100;
@@ -67,7 +68,6 @@ public class RpcStageController extends ArbitrateLifeCycle implements ProcessLis
 				return new ReplyProcessQueue(size);
 			}
 		});
-
 		progress = new MapMaker().makeMap();
 		// 注册一下监听事件变化
 		processMonitor = ArbitrateFactory.getInstance(pipelineId, ProcessMonitor.class);
@@ -79,10 +79,10 @@ public class RpcStageController extends ArbitrateLifeCycle implements ProcessLis
 		if (stage.isSelect()) {
 			throw new ArbitrateException("not support");
 		}
+
 		try {
 			return replys.get(stage).take();
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
 	}

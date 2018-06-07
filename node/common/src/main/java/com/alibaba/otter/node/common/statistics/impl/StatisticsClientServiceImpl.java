@@ -51,7 +51,7 @@ public class StatisticsClientServiceImpl implements StatisticsClientService, Ini
     private static final int                   DEFAULT_POOL          = 10;
     // 使用一个buffer队列，保证inc/desc/reset的发送操作为一个串行过程
     private BlockingQueue<DelayCountEvent>     delayCountStatsBuffer = new LinkedBlockingQueue<DelayCountEvent>(
-                                                                                                                10 * 1000);
+                                                                                                                100 * 1000);
     private static ScheduledThreadPoolExecutor scheduler;
     private NodeCommmunicationClient           nodeCommmunicationClient;
 

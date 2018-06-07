@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.otter.common.push.datasource.DataSourceHanlder;
+import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -59,8 +60,8 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 
 	public MediaPushDataSourceHandler() {
 		// 设置soft策略
-		Cache<Long, Map<DbMediaSource, DataSource>> mapMaker = CacheBuilder.newBuilder().maximumSize(1000).softValues()
-				.removalListener(new RemovalListener<Long, Map<DbMediaSource, DataSource>>() {
+		Cache<Long, Map<DbMediaSource, DataSource>> mapMaker = CacheBuilder.newBuilder().maximumSize(1000)
+				.softValues().removalListener(new RemovalListener<Long, Map<DbMediaSource, DataSource>>() {
 
 					@Override
 					public void onRemoval(RemovalNotification<Long, Map<DbMediaSource, DataSource>> paramR) {
@@ -81,7 +82,6 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 				}).build();
 
 		// 构建第一层map
-		// 构建第一层map
 		dataSources = CacheBuilder.newBuilder().maximumSize(1000)
 				.build(new CacheLoader<Long, LoadingCache<DbMediaSource, DataSource>>() {
 					@Override
@@ -98,24 +98,6 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 								});
 					}
 				});
-		// dataSources = new MapMaker().makeComputingMap(new Function<Long,
-		// Map<DbMediaSource, DataSource>>() {
-		//
-		// public Map<DbMediaSource, DataSource> apply(Long pipelineId) {
-		// // 构建第二层map
-		// return new MapMaker().makeComputingMap(new Function<DbMediaSource,
-		// DataSource>() {
-		//
-		// public DataSource apply(DbMediaSource dbMediaSource) {
-		// return createDataSource(dbMediaSource.getUrl(),
-		// dbMediaSource.getUsername(),
-		// dbMediaSource.getPassword(), dbMediaSource.getDriver(),
-		// dbMediaSource.getType(), dbMediaSource.getEncode());
-		// }
-		//
-		// });
-		// }
-		// });
 	}
 
 	public boolean support(DbMediaSource dbMediaSource) {
@@ -133,13 +115,12 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 		try {
 			return dataSources.get(pipelineId).get(dbMediaSource);
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
 	}
 
 	protected DataSource createDataSource(String url, String userName, String password, String driverClassName,
-			String dataMediaType, String encoding) {
+			DataMediaType dataMediaType, String encoding) {
 		MediaInfo media = parseMediaInfo(url);
 		if (media == null) {
 			if (isMediaPushDataSource(url)) {
@@ -177,20 +158,6 @@ public class MediaPushDataSourceHandler implements DataSourceHanlder {
 		} catch (ExecutionException e1) {
 			e1.printStackTrace();
 		}
-//		Map<DbMediaSource, DataSource> sources = dataSources.remove(pipelineId);
-//		if (sources != null) {
-//			for (DataSource dataSource : sources.values()) {
-//				try {
-//					MediaPushDataSource mediaPushDataSource = (MediaPushDataSource) dataSource;
-//					mediaPushDataSource.destory();
-//				} catch (SQLException e) {
-//					log.error("ERROR ## close the datasource has an error", e);
-//				}
-//			}
-//
-//			sources.clear();
-//		}
-
 		return true;
 	}
 

@@ -57,6 +57,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.alibaba.otter.common.push.datasource.DataSourceHanlder;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
+import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
@@ -365,7 +366,7 @@ public class DataSourceCreator implements DisposableBean {
 	}
 
 	private DataSource createDataSource(String url, String userName, String password, String driverClassName,
-			String dataMediaType, String encoding) {
+			DataMediaType dataMediaType, String encoding) {
 		BasicDataSource dbcpDs = new BasicDataSource();
 
 		dbcpDs.setInitialSize(initialSize);// 初始化连接池时创建的连接数
@@ -389,10 +390,10 @@ public class DataSourceCreator implements DisposableBean {
 		dbcpDs.setUsername(userName);
 		dbcpDs.setPassword(password);
 
-		if ("oracle".equalsIgnoreCase(dataMediaType)) {
+		if (dataMediaType.isOracle()) {
 			dbcpDs.addConnectionProperty("restrictGetTables", "true");
 			// dbcpDs.setValidationQuery("select 1 from dual");
-		} else if ("oracle".equalsIgnoreCase(dataMediaType)) {
+		} else if (dataMediaType.isMysql()) {
 			// open the batch mode for mysql since 5.1.8
 			dbcpDs.addConnectionProperty("useServerPrepStmts", "false");
 			dbcpDs.addConnectionProperty("rewriteBatchedStatements", "true");

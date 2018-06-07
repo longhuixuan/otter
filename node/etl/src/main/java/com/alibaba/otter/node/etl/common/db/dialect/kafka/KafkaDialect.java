@@ -2,7 +2,6 @@ package com.alibaba.otter.node.etl.common.db.dialect.kafka;
 
 import org.apache.ddlutils.model.Table;
 import org.apache.kafka.clients.producer.Producer;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.alibaba.otter.node.etl.common.db.dialect.AbstraNoSQLDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.NoSqlTemplate;
@@ -28,6 +27,8 @@ public class KafkaDialect extends AbstraNoSQLDialect {
 		return false;
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
 	public Producer getJdbcTemplate() {
 		return producer;
 	}
@@ -58,11 +59,6 @@ public class KafkaDialect extends AbstraNoSQLDialect {
 	public NoSqlTemplate getSqlTemplate() {
 		return nosqlTemplate;
 	}
-
-	
-
-
-	
 
 
 }

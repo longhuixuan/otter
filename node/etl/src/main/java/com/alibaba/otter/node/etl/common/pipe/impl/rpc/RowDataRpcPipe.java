@@ -68,7 +68,6 @@ public class RowDataRpcPipe extends AbstractRpcPipe<DbBatch, RpcPipeKey> {
         try {
 			return cache.get(event.getKey());
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		} // 不建议使用remove，rpc调用容易有retry请求，导致第二次拿到的数据为null
     }

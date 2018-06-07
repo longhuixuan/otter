@@ -110,8 +110,9 @@ public class DataBatchLoader implements OtterLoader<DbBatch, List<LoadContext>>,
 				exception = new LoadException(e);
 				break;
 			} catch (ExecutionException e) {
-				exception = new LoadException(e);
-				break;
+				e.printStackTrace();
+				//exception = new LoadException(e);
+				//break;
 			}
 
 			index++;
@@ -210,15 +211,26 @@ public class DataBatchLoader implements OtterLoader<DbBatch, List<LoadContext>>,
 	 */
 	private List<RowBatch> split(RowBatch rowBatch) {
 		final Identity identity = rowBatch.getIdentity();
+
 		LoadingCache<DataMediaSource, RowBatch> result = CacheBuilder.newBuilder().maximumSize(1000)
 				.build(new CacheLoader<DataMediaSource, RowBatch>() {
-
-					public RowBatch load(DataMediaSource input) {
+					@Override
+					public RowBatch load(DataMediaSource input) throws Exception {
 						RowBatch rowBatch = new RowBatch();
 						rowBatch.setIdentity(identity);
 						return rowBatch;
 					}
+
 				});
+		// new MapMaker().makeComputingMap(new Function<DataMediaSource,
+		// RowBatch>() {
+		//
+		// public RowBatch apply(DataMediaSource input) {
+		// RowBatch rowBatch = new RowBatch();
+		// rowBatch.setIdentity(identity);
+		// return rowBatch;
+		// }
+		// });
 		try {
 			for (EventData eventData : rowBatch.getDatas()) {
 				// 获取介质信息
@@ -226,8 +238,7 @@ public class DataBatchLoader implements OtterLoader<DbBatch, List<LoadContext>>,
 						eventData.getTableId());
 				result.get(media.getSource()).merge(eventData); // 归类
 			}
-		} catch (ExecutionException e) {
-			e.printStackTrace();
+		} catch (Exception ex) {
 		}
 		return new ArrayList<RowBatch>(result.asMap().values());
 	}

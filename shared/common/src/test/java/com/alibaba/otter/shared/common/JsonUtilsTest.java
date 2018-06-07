@@ -32,6 +32,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.otter.shared.common.model.config.Transient;
+import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.alibaba.otter.shared.common.utils.ByteUtils;
 import com.alibaba.otter.shared.common.utils.JsonUtils;
@@ -45,7 +46,7 @@ public class JsonUtilsTest extends BaseOtterTest {
         media.setGmtModified(new Date());
         media.setId(1L);
         media.setName("test");
-        media.setType("mysql");// 这个是枚举值
+        media.setType(DataMediaType.MYSQL);// 这个是枚举值
         media.setUsername("ljh");
         media.setPassword("ljh");
 

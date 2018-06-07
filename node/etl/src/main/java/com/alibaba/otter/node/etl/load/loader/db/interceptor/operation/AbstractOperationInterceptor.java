@@ -145,8 +145,8 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
         String markTableColumn = context.getPipeline().getParameters().getSystemMarkTableColumn();
         synchronized (dialect.getJdbcTemplate()) {
             if (tableCheckStatus.contains(dialect.getJdbcTemplate()) == false) {
-                init((JdbcTemplate) dialect.getJdbcTemplate(), markTableName, markTableColumn);
-                tableCheckStatus.add((JdbcTemplate)dialect.getJdbcTemplate());
+                init(dialect.getJdbcTemplate(), markTableName, markTableColumn);
+                tableCheckStatus.add(dialect.getJdbcTemplate());
             }
         }
 

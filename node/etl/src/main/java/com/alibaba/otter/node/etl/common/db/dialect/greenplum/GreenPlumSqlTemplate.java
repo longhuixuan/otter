@@ -5,10 +5,10 @@ import com.alibaba.otter.node.etl.common.db.dialect.SqlTemplate;
 public class GreenPlumSqlTemplate implements SqlTemplate {
 
 	@Override
-	 public String getMergeSql(String schemaName, String tableName, String[] pkNames, String[] columnNames,
-             String[] viewColumnNames, boolean includePks) {
-		 return this.getInsertSql(schemaName, tableName, pkNames, viewColumnNames);
-	 }
+	public String getMergeSql(String schemaName, String tableName, String[] pkNames, String[] columnNames,
+			String[] viewColumnNames) {
+		return this.getInsertSql(schemaName, tableName, pkNames, viewColumnNames);
+	}
 
 	private static final String DOT = ".";
 

@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.common.push.datasource;
 
+import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 
 /**
  * @author zebin.xuzb 2013-1-23 下午6:46:26
@@ -27,16 +28,16 @@ public class DataSourceKey {
     private String        userName;
     private String        password;
     private String        driverClassName;
-    private String dataMediaType;
+    private DataMediaType dataMediaType;
     private String        encoding;
 
     public static DataSourceKey getInstance(String url, String userName, String password, String driverClassName,
-    		String dataMediaType, String encoding) {
+                                            DataMediaType dataMediaType, String encoding) {
         return new DataSourceKey(url, userName, password, driverClassName, dataMediaType, encoding);
     }
 
     public DataSourceKey(String url, String userName, String password, String driverClassName,
-                         String dataMediaType, String encoding){
+                         DataMediaType dataMediaType, String encoding){
         this.url = url;
         this.userName = userName;
         this.password = password;
@@ -99,7 +100,7 @@ public class DataSourceKey {
         return driverClassName;
     }
 
-    public String getDataMediaType() {
+    public DataMediaType getDataMediaType() {
         return dataMediaType;
     }
 

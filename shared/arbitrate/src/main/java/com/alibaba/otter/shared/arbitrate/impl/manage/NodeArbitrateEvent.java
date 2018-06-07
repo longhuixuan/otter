@@ -50,7 +50,9 @@ public class NodeArbitrateEvent implements ArbitrateEvent {
         String path = ManagePathUtils.getNode(nid);
 
         try {
-            zookeeper.create(path, new byte[0], CreateMode.EPHEMERAL);// 创建为临时节点
+        	if (!zookeeper.exists(path)){
+        		zookeeper.create(path, new byte[0], CreateMode.EPHEMERAL);// 创建为临时节点
+        	}
         } catch (ZkException e) {
             throw new ArbitrateException("Node_init", nid.toString(), e);
         }

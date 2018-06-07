@@ -57,7 +57,12 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         result.setPairId(context.getDataMediaPair().getId());
         result.setTableId(dataMedia.getId());
         // 需要特殊处理下multi场景
-        buildName(data, result, context.getDataMediaPair());
+        if (!dataMedia.getSource().getType().isKafka()){//如果是kafka，不需要使用目标的表名
+        	buildName(data, result, context.getDataMediaPair());
+        }else{
+        	 result.setSchemaName(data.getSchemaName());
+             result.setTableName(data.getTableName());
+        }
         result.setEventType(data.getEventType());
         result.setExecuteTime(data.getExecuteTime());
         result.setSyncConsistency(data.getSyncConsistency());
@@ -66,7 +71,7 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         result.setSize(data.getSize());
         result.setHint(data.getHint());
         result.setWithoutSchema(data.isWithoutSchema());
-        if (data.getEventType().isDdl()) {
+        if (data.getEventType().isDdl() && dataMedia.getSource().getType().isMysql()) {
             // ddl不需要处理字段
             if (StringUtils.equalsIgnoreCase(result.getSchemaName(), data.getSchemaName())
                 && StringUtils.equalsIgnoreCase(result.getTableName(), data.getTableName())) {
@@ -96,11 +101,25 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         if (useTableTransform || enableCompatibleMissColumn) {// 控制一下是否需要反查table
                                                               // meta信息，如果同构数据库，完全没必要反查
             // 获取目标库的表信息
-            DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
-                (DbMediaSource) dataMedia.getSource());
-
-            Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
-            tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+        	if (dataMedia.getSource().getType().isMysql()||dataMedia.getSource().getType().isOracle()){
+        		 DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
+        	                (DbMediaSource) dataMedia.getSource());
+        	     Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
+        	     tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+        	}
+//        	else if (dataMedia.getSource().getType().isElasticSearch()){
+//        		
+//        	}else if (dataMedia.getSource().getType().isCassandra()){
+//        		
+//        	}else if (dataMedia.getSource().getType().isHBase()){
+//        		
+//        	}else if (dataMedia.getSource().getType().isKafka()){
+//        		
+//        	}else if (dataMedia.getSource().getType().isHDFSArvo()){
+//        		
+//        	}else if (dataMedia.getSource().getType().isGreenPlum()){
+//        		
+//        	}
         }
 
         // 处理column转化
@@ -137,13 +156,18 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         String schemaName = buildName(data.getSchemaName(),
             sourceDataMedia.getNamespaceMode(),
             targetDataMedia.getNamespaceMode());
-        String tableName = buildName(data.getTableName(), sourceDataMedia.getNameMode(), targetDataMedia.getNameMode());
+        String tableName =null;
+        if (targetDataMedia.getSource().getType().isGreenPlum()){
+        	tableName=targetDataMedia.getNameMode().getSingleValue();
+        }else{
+        	tableName = buildName(data.getTableName(), sourceDataMedia.getNameMode(), targetDataMedia.getNameMode());
+        }
         result.setSchemaName(schemaName);
         result.setTableName(tableName);
     }
 
     private String buildName(String name, ModeValue sourceModeValue, ModeValue targetModeValue) {
-        if (targetModeValue.getMode().isWildCard()) {
+        if (targetModeValue.getMode().isWildCard() ) {
             return name; // 通配符，认为源和目标一定是一致的
         } else if (targetModeValue.getMode().isMulti()) {
             int index = ConfigHelper.indexIgnoreCase(sourceModeValue.getMultiValue(), name);
@@ -234,7 +258,8 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         tcolumn.setKey(scolumn.isKey());// 左右两边的主键值必须保持一样，可以不为物理主键
         tcolumn.setIndex(scolumn.getIndex());
         tcolumn.setUpdate(scolumn.isUpdate());
-
+        tcolumn.setPkFunctionName(scolumn.getPkFunctionName());
+        
         String columnName = translateColumnName(scolumn.getColumnName(), dataMediaPair, translateColumnNames);
         if (StringUtils.isBlank(columnName)) {
             throw new TransformException("can't translate column name:" + scolumn.getColumnName() + "in pair:"
@@ -264,7 +289,7 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
 
             Column matchDbColumn = getMatchColumn(tableHolder.getTable().getColumns(), tcolumn.getColumnName());
             // 匹配字段为空，可能源库发生过DDL操作，目标库重新载入一下meta信息
-            if (matchDbColumn == null) { // 尝试reload一下table meta
+            if (matchDbColumn == null && dataMediaPair.getTarget().getSource().getType().isMysql()) { // 目标库非mysql不再reload table meta 尝试reload一下table meta
                 // 获取目标库的表信息
                 DbMediaSource dbMediaSource = (DbMediaSource) dataMediaPair.getTarget().getSource();
                 DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(), dbMediaSource);

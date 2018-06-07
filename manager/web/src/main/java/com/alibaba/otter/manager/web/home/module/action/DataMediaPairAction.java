@@ -22,7 +22,6 @@ import java.util.List;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.kafka.common.errors.TopicExistsException;
 
 import com.alibaba.citrus.service.form.CustomErrors;
 import com.alibaba.citrus.service.form.Group;
@@ -45,6 +44,7 @@ import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.ExtensionData;
 import com.alibaba.otter.shared.common.model.config.data.ExtensionDataType;
 
+import kafka.common.TopicExistsException;
 
 public class DataMediaPairAction {
 
@@ -255,13 +255,15 @@ public class DataMediaPairAction {
 	public void doCreateTopic(@Param("dataMediaPairId") Long dataMediaPairId, @Param("pnum") int pnum,@Param("repnum")  int repnum, Navigator nav)
 			throws WebxException {
 		DataMediaPair dataMediaPair=dataMediaPairService.findById(dataMediaPairId);
-		//if (dataMediaPair.getTarget().getSource().getType().isKafka()){
+		if (dataMediaPair.getTarget().getSource().getType().isKafka()){
 			try{
 				dataMediaPairService.createKafkaTopic(dataMediaPair,pnum,repnum);
 			}catch(TopicExistsException tee){
 
 			}
-		//}
+		}else{
+			
+		}
 		nav.redirectToLocation("dataMediaPairList.htm?pipelineId=" + dataMediaPair.getPipelineId());
 	}
 

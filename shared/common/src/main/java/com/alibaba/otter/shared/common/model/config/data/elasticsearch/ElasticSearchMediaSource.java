@@ -3,6 +3,8 @@ package com.alibaba.otter.shared.common.model.config.data.elasticsearch;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.ServerPort;
 
@@ -49,5 +51,12 @@ public class ElasticSearchMediaSource extends DataMediaSource {
 		this.servers = servers;
 	}
 	
-	
+	public String getConnectionStr(){
+		String pstr= "servers:"+StringUtils.join(servers, ';')+" clusterName:"+this.clusterName
+				+" indexName:"+this.indexName;
+		if (StringUtils.isNotEmpty(this.username)){
+			pstr=pstr+" userName:"+this.username+" password:"+this.password;
+		}
+		return pstr;
+	}
 }

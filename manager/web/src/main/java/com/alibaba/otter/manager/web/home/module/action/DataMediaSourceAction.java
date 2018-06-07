@@ -30,12 +30,7 @@ import com.alibaba.otter.manager.biz.config.datamedia.DataMediaService;
 import com.alibaba.otter.manager.biz.config.datamediasource.DataMediaSourceService;
 import com.alibaba.otter.manager.web.common.WebConstant;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.cassandra.CassandraMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.elasticsearch.ElasticSearchMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.hbase.HBaseMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.hdfs.HDFSMediaSource;
-import com.alibaba.otter.shared.common.model.config.data.kafka.KafkaMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.mq.MqMediaSource;
 
 public class DataMediaSourceAction extends AbstractAction {
@@ -59,79 +54,37 @@ public class DataMediaSourceAction extends AbstractAction {
         DataMediaSource dataMediaSource = new DataMediaSource();
         dataMediaSourceInfo.setProperties(dataMediaSource);
 
-        if ("mysql".equalsIgnoreCase(dataMediaSource.getType()) ){
+        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle() 
+        		|| dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isElasticSearch()
+        		||dataMediaSource.getType().isHBase() ||dataMediaSource.getType().isGreenPlum() 
+        		|| dataMediaSource.getType().isHDFSArvo() || dataMediaSource.getType().isKafka()) {
             DbMediaSource dbMediaSource = new DbMediaSource();
             dataMediaSourceInfo.setProperties(dbMediaSource);
-//            if (dataMediaSource.getType().isMysql()) {
+            if (dataMediaSource.getType().isMysql()) {
                 dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-//            } else if (dataMediaSource.getType().isOracle()) {
-//                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-//            }else if (dataMediaSource.getType().isGreenplum()) {
-//                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
-//            }
+            } else if (dataMediaSource.getType().isOracle()) {
+                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+            }else if (dataMediaSource.getType().isGreenPlum()) {
+                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
+            }
             try {
                 dataMediaSourceService.create(dbMediaSource);
             } catch (RepeatConfigureException rce) {
                 err.setMessage("invalidDataMediaSource");
                 return;
             }
-        } 
-//        else if (dataMediaSource.getType().isMq()) {
-//            MqMediaSource mqMediaSource = new MqMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }else if ( dataMediaSource.getType().isCassandra()){
-//        	CassandraMediaSource mqMediaSource = new CassandraMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }else if (dataMediaSource.getType().isElasticSearch()){
-//        	ElasticSearchMediaSource mqMediaSource = new ElasticSearchMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }else if (dataMediaSource.getType().isHbase()){
-//        	HBaseMediaSource mqMediaSource = new HBaseMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }else if (dataMediaSource.getType().isHDFSArvo()){
-//        	HDFSMediaSource mqMediaSource = new HDFSMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }else if (dataMediaSource.getType().isKafka()){
-//        	KafkaMediaSource mqMediaSource = new KafkaMediaSource();
-//            dataMediaSourceInfo.setProperties(mqMediaSource);
-//            try {
-//                dataMediaSourceService.create(mqMediaSource);
-//            } catch (RepeatConfigureException rce) {
-//                err.setMessage("invalidDataMediaSource");
-//                return;
-//            }
-//        }
-		 nav.redirectTo(WebConstant.DATA_MEDIA_SOURCE_LIST_LINK);
+        } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
+            MqMediaSource mqMediaSource = new MqMediaSource();
+            dataMediaSourceInfo.setProperties(mqMediaSource);
+
+            try {
+                dataMediaSourceService.create(mqMediaSource);
+            } catch (RepeatConfigureException rce) {
+                err.setMessage("invalidDataMediaSource");
+                return;
+            }
+        }
+        nav.redirectTo(WebConstant.DATA_MEDIA_SOURCE_LIST_LINK);
     }
 
     /**
@@ -154,13 +107,13 @@ public class DataMediaSourceAction extends AbstractAction {
         DbMediaSource dbMediaSource = new DbMediaSource();
         dataMediaSourceInfo.setProperties(dbMediaSource);
 
-//        if (dbMediaSource.getType().isMysql()) {
+        if (dbMediaSource.getType().isMysql()) {
             dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-//        } else if (dbMediaSource.getType().isOracle()) {
-//            dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-//        }else if (dbMediaSource.getType().isGreenplum()) {
-//            dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
-//        }
+        } else if (dbMediaSource.getType().isOracle()) {
+            dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+        }else if (dbMediaSource.getType().isGreenPlum()) {
+            dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
+        }
 
         try {
             dataMediaSourceService.modify(dbMediaSource);

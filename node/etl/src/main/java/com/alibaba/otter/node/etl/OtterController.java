@@ -19,6 +19,7 @@ package com.alibaba.otter.node.etl;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -73,11 +74,20 @@ public class OtterController implements NodeTaskListener, OtterControllerMBean {
 	// 第一层为pipelineId，第二层为S.E.T.L模块
 	private LoadingCache<Long, Map<StageType, GlobalTask>> controllers = CacheBuilder.newBuilder().maximumSize(1000)
 			.build(new CacheLoader<Long, Map<StageType, GlobalTask>>() {
-
-				public Map<StageType, GlobalTask> load(Long pipelineId) {
+				@Override
+				public Map<StageType, GlobalTask> load(Long pipelineId) throws Exception {
 					return new MapMaker().makeMap();
 				}
+
 			});
+
+	// new MapMaker().makeComputingMap(new Function<Long, Map<StageType,
+	// GlobalTask>>() {
+	//
+	// public Map<StageType, GlobalTask> apply(Long pipelineId) {
+	// return new MapMaker().makeMap();
+	// }
+	// });
 	private ConfigClientService configClientService;
 	private ArbitrateManageService arbitrateManageService;
 	private NodeTaskService nodeTaskService;
@@ -152,7 +162,6 @@ public class OtterController implements NodeTaskListener, OtterControllerMBean {
 					} else {
 						logger.info("INFO ## this pipeline id = {} is not start sync", pipelineId);
 					}
-					controllers.invalidate(pipelineId);
 				} catch (ExecutionException e) {
 					e.printStackTrace();
 				}
@@ -409,7 +418,6 @@ public class OtterController implements NodeTaskListener, OtterControllerMBean {
 				return "node don't running stage:" + stage;
 			}
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
 	}

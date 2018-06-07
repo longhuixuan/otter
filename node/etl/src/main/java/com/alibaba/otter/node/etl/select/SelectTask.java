@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.etl.select;
 
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -126,7 +127,7 @@ public class SelectTask extends GlobalTask {
                         startup();
                     }
                 } catch (Throwable e) {
-                    if (isInterrupt(e)) {
+                    if (isInterrupt(e)) {e.printStackTrace();
                         logger.info("INFO ## select is interrupt", e);
                         return;
                     } else {
@@ -170,9 +171,8 @@ public class SelectTask extends GlobalTask {
         otterSelector.start();
 
         canStartSelector.set(false);// 初始化为false
-        startProcessTermin();
+		startProcessTermin();
         startProcessSelect();
-
         isStart = true;
     }
 
@@ -345,7 +345,7 @@ public class SelectTask extends GlobalTask {
             } catch (Throwable e) {
                 if (!isInterrupt(e)) {
                     logger.error(String.format("[%s] selectTask is error!", pipelineId), e);
-                    sendRollbackTermin(pipelineId, e);
+                    sendRollbackTermin(pipelineId, e);e.printStackTrace();
                 } else {
                     logger.info(String.format("[%s] selectTask is interrrupt!", pipelineId), e);
                     return;

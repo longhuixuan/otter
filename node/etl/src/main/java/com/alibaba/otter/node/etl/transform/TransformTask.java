@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.etl.transform;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 

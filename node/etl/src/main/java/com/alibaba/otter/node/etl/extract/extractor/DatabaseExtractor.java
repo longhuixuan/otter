@@ -43,14 +43,16 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.alibaba.otter.node.etl.common.db.dialect.SqlTemplate;
 import com.alibaba.otter.node.etl.OtterConstants;
 import com.alibaba.otter.node.etl.common.db.dialect.DbDialect;
+import com.alibaba.otter.node.etl.common.db.dialect.SqlTemplate;
 import com.alibaba.otter.node.etl.common.db.dialect.oracle.OracleDialect;
 import com.alibaba.otter.node.etl.common.db.utils.SqlUtils;
 import com.alibaba.otter.node.etl.extract.exceptions.ExtractException;
@@ -297,7 +299,7 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
         }
 
         public void run() {
-            try {
+        	 try {
                 MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipeline.getId()));
                 Thread.currentThread().setName(String.format(WORKER_NAME_FORMAT, pipeline.getId(), pipeline.getName()));
                 // 获取数据表信息
@@ -346,7 +348,7 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
                         eventData.getSchemaName(),
                         eventData.getTableName(),
                         keyTableData,
-                        columnTableData);
+                        columnTableData,(DbMediaSource) dataMedia.getSource());
 
                     if (newColumnValues == null) {
                         // miss from db
@@ -402,7 +404,6 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
                     }
                 }
             } catch (InterruptedException e) {
-                // ignore
             } finally {
                 Thread.currentThread().setName(WORKER_NAME);
                 MDC.remove(OtterConstants.splitPipelineLogFileKey);
@@ -441,7 +442,7 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
         }
 
         private List<String> select(DbDialect dbDialect, String schemaName, String tableName, TableData keyTableData,
-                                    TableData columnTableData) throws InterruptedException {
+                                    TableData columnTableData,DbMediaSource source) throws InterruptedException {
             String selectSql = ((SqlTemplate)dbDialect.getSqlTemplate()).getSelectSql(schemaName,
                 tableName,
                 keyTableData.columnNames,
@@ -453,10 +454,21 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
                 }
 
                 try {
-                    List<List<String>> result =((JdbcTemplate) dbDialect.getJdbcTemplate()).query(selectSql,
+                	List<List<String>> result =null;
+                	try{
+                		result = ((JdbcTemplate)dbDialect.getJdbcTemplate()).query(selectSql,
                         keyTableData.columnValues,
                         keyTableData.columnTypes,
                         new RowDataMapper(columnTableData.columnTypes));
+                	}catch(CannotGetJdbcConnectionException | CannotCreateTransactionException cge){//连接被服务端关闭异常，重建连接并重试
+                    	cge.printStackTrace();
+                    	dbDialectFactory.removeDbDialect(pipeline.getId(),source);
+                    	dbDialect=dbDialectFactory.getDbDialect(pipeline.getId(), source);
+                    	result = ((JdbcTemplate)dbDialect.getJdbcTemplate()).query(selectSql,
+                                keyTableData.columnValues,
+                                keyTableData.columnTypes,
+                                new RowDataMapper(columnTableData.columnTypes));
+                    }
                     if (CollectionUtils.isEmpty(result)) {
                         logger.warn("the mediaName = {}.{} not has rowdate in db \n {}", new Object[] { schemaName,
                                 tableName, dumpEventData(eventData, selectSql) });
@@ -470,7 +482,6 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
                     logger.warn("retry [" + (i + 1) + "] failed", e);
                 }
             }
-
             throw new RuntimeException("db extract failed , data:\n " + dumpEventData(eventData, selectSql), exception);
         }
 

@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.etl.extract;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.slf4j.MDC;
@@ -60,7 +61,6 @@ public class ExtractTask extends GlobalTask {
                         if (profiling) {
                             profilingStartTime = System.currentTimeMillis();
                         }
-
                         MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipelineId));
                         String currentName = Thread.currentThread().getName();
                         Thread.currentThread().setName(createTaskName(pipelineId, "ExtractWorker"));

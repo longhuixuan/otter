@@ -218,7 +218,9 @@ public class ChannelArbitrateEvent implements ArbitrateEvent {
         } catch (ZkNoNodeException e) {
             // 如果节点已经不存在，则不抛异常
             // ignore
-            return null;
+        	init(channelId);
+        	data = zookeeper.readData(path);
+//            return null;
         } catch (ZkException e) {
             throw new ArbitrateException("Channel_status", channelId.toString(), e);
         }

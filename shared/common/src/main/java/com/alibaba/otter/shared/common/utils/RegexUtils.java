@@ -39,19 +39,26 @@ public class RegexUtils {
     private static LoadingCache<String, Pattern> patterns = null;
 
     static {
-        patterns =  CacheBuilder.newBuilder().maximumSize(1000)
-    			.build(new CacheLoader<String, Pattern>() {
-
-        			@Override
-			public Pattern load(String pattern) throws Exception {
-				try {
-                    PatternCompiler pc = new Perl5Compiler();
-                    return pc.compile(pattern, Perl5Compiler.CASE_INSENSITIVE_MASK | Perl5Compiler.READ_ONLY_MASK);
-                } catch (MalformedPatternException e) {
-                    throw new RuntimeException("Regex failed!", e);
-                }
-			}
-        });
+    	 patterns =CacheBuilder.newBuilder()
+                 .maximumSize(1000)    // 最多可以缓存1000个key
+                 .build(new CacheLoader<String, Pattern>(){ 
+     				@Override
+     				public Pattern load(String pattern) throws Exception {
+     					 try {
+     	                    PatternCompiler pc = new Perl5Compiler();
+     	                    return pc.compile(pattern, Perl5Compiler.CASE_INSENSITIVE_MASK | Perl5Compiler.READ_ONLY_MASK);
+     	                } catch (MalformedPatternException e) {
+     	                    throw new RuntimeException("Regex failed!", e);
+     	                }
+     				}
+     			}); 
+    	 
+//        patterns = new MapMaker().softValues().makeComputingMap(new Function<String, Pattern>() {
+//
+//            public Pattern apply(String pattern) {
+//               
+//            }
+//        });
     }
 
     public static String findFirst(String originalStr, String regex) {

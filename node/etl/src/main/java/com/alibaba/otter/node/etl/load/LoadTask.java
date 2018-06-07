@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.etl.load;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.slf4j.MDC;
@@ -51,10 +52,10 @@ public class LoadTask extends GlobalTask {
     public void run() {
         MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipelineId));
         while (running) {
+
             try {
                 final EtlEventData etlEventData = arbitrateEventService.loadEvent().await(pipelineId);
                 Runnable task = new Runnable() {
-
                     public void run() {
                         // 设置profiling信息
                         boolean profiling = isProfiling();
@@ -83,7 +84,6 @@ public class LoadTask extends GlobalTask {
                                                             etlEventData.getStartTime());
 
                             processedContexts = otterLoaderFactory.load(dbBatch);
-
                             if (profiling) {
                                 Long profilingEndTime = System.currentTimeMillis();
                                 stageAggregationCollector.push(pipelineId,
@@ -137,6 +137,7 @@ public class LoadTask extends GlobalTask {
                 SetlFuture extractFuture = new SetlFuture(StageType.LOAD, etlEventData.getProcessId(), pendingFuture,
                                                           task);
                 executorService.execute(extractFuture);
+
             } catch (Throwable e) {
                 if (isInterrupt(e)) {
                     logger.info(String.format("[%s] loadTask is interrupted!", pipelineId), e);

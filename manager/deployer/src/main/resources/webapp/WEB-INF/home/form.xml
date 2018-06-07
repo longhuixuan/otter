@@ -238,7 +238,9 @@
 				</fm-validators:required-validator>
 			</field>
 			<field name="type" displayName="dataSource的类型" />
-			<field name="propertiesStr" displayName="连接属性">
+			<field name="username" displayName="用户名" />
+			<field name="password" displayName="密码" />
+			<field name="url" displayName="链接">
 				<fm-validators:required-validator>
 					<message>必须填写${displayName}</message>
 				</fm-validators:required-validator>

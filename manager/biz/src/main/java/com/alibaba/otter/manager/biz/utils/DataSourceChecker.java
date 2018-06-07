@@ -46,6 +46,7 @@ import com.alibaba.otter.shared.common.model.config.ConfigHelper;
 import com.alibaba.otter.shared.common.model.config.ModeValueFilter;
 import com.alibaba.otter.shared.common.model.config.data.DataMedia.ModeValue;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
+import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.alibaba.otter.shared.common.utils.meta.DdlSchemaFilter;
 import com.alibaba.otter.shared.common.utils.meta.DdlTableNameFilter;
@@ -123,7 +124,7 @@ public class DataSourceChecker {
     }
 
     @SuppressWarnings("resource")
-    public String check(String name,String url, String encode, String sourceType) {
+    public String check(String name,String url, String username, String password, String encode, String sourceType) {
         Connection conn = null;
         Statement stmt = null;
         ResultSet rs = null;
@@ -133,28 +134,30 @@ public class DataSourceChecker {
             DbMediaSource dbMediaSource = new DbMediaSource();
             dbMediaSource.setName(name);
             dbMediaSource.setUrl(url);
+            dbMediaSource.setUsername(username);
+            dbMediaSource.setPassword(password);
             dbMediaSource.setEncode(encode);
 
-//            if (sourceType.equalsIgnoreCase("MYSQL")) {
-//                dbMediaSource.setType(DataMediaType.MYSQL);
-//                dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-//            } else if (sourceType.equalsIgnoreCase("ORACLE")) {
-//                dbMediaSource.setType(DataMediaType.ORACLE);
-//                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-//            } else if (sourceType.equalsIgnoreCase("GREENPLUM")) {
-//                dbMediaSource.setType(DataMediaType.GREENPLUM);
-//                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
-//            }else if (sourceType.equalsIgnoreCase("KAFKA")) {
-//                dbMediaSource.setType(DataMediaType.KAFKA);
-//            }else if (sourceType.equalsIgnoreCase("CASSANDRA")) {
-//                dbMediaSource.setType(DataMediaType.CASSANDRA);
-//            }else if (sourceType.equalsIgnoreCase("HBASE")) {
-//                dbMediaSource.setType(DataMediaType.HBASE);
-//            }else if (sourceType.equalsIgnoreCase("HDFS_ARVO")) {
-//                dbMediaSource.setType(DataMediaType.HDFS);
-//            }else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
-//                dbMediaSource.setType(DataMediaType.ELASTICSEARCH);
-//            }
+            if (sourceType.equalsIgnoreCase("MYSQL")) {
+                dbMediaSource.setType(DataMediaType.MYSQL);
+                dbMediaSource.setDriver("com.mysql.jdbc.Driver");
+            } else if (sourceType.equalsIgnoreCase("ORACLE")) {
+                dbMediaSource.setType(DataMediaType.ORACLE);
+                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+            } else if (sourceType.equalsIgnoreCase("GREENPLUM")) {
+                dbMediaSource.setType(DataMediaType.GREENPLUM);
+                dbMediaSource.setDriver("com.pivotal.jdbc.GreenplumDriver");
+            }else if (sourceType.equalsIgnoreCase("KAFKA")) {
+                dbMediaSource.setType(DataMediaType.KAFKA);
+            }else if (sourceType.equalsIgnoreCase("CASSANDRA")) {
+                dbMediaSource.setType(DataMediaType.CASSANDRA);
+            }else if (sourceType.equalsIgnoreCase("HBASE")) {
+                dbMediaSource.setType(DataMediaType.HBASE);
+            }else if (sourceType.equalsIgnoreCase("HDFS_ARVO")) {
+                dbMediaSource.setType(DataMediaType.HDFS_ARVO);
+            }else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
+                dbMediaSource.setType(DataMediaType.ELASTICSEARCH);
+            }
             if (sourceType.equalsIgnoreCase("MYSQL") || sourceType.equalsIgnoreCase("greenplum") || sourceType.equalsIgnoreCase("ORACLE")){//mysql ,oracle测试
             	dataSource = dataSourceCreator.createDataSource(dbMediaSource);
                 try {
@@ -245,45 +248,45 @@ public class DataSourceChecker {
         DataSource dataSource = null;
         try {
             DbMediaSource dbMediaSource = (DbMediaSource) source;
-//            if (dbMediaSource.getType().isCassandra()){
-//            	Cluster cluster=dataSourceCreator.getCluster(dbMediaSource);
-//            	Session session=cluster.connect();
-//            	
-//            	BoundStatement bindStatement =null;
-//            	try{
-//            		bindStatement=session.prepare( "select keyspace_name,table_name from system_schema.tables where keyspace_name=? and table_name=?")
-//            			.bind(namespace,name);
-//            	}catch(InvalidQueryException iqe){
-//            		bindStatement=session.prepare( "select keyspace_name,columnfamily_name from system.schema_columnfamilies where keyspace_name=? and columnfamily_name=? ")
-//                			.bind(namespace,name);
-//            	}
-//            	com.datastax.driver.core.ResultSet resultSet = session.execute(bindStatement);
-//            	if (!resultSet.iterator().hasNext()) {
-//            		session.close();
-//            		return SELECT_FAIL;
-//            	}
-//            	session.close();
-//            }else if (dbMediaSource.getType().isElasticSearch()){
-//            	Client client=dataSourceCreator.getClient(source);
-//            	String[] urls=StringUtils.split(dbMediaSource.getUrl(), "||");
-//            	TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(urls[2]).setTypes(name).execute().actionGet();
-//            	if (!typeResp.isExists()){
-//            		 return SELECT_FAIL;
-//            	}
-//            }else if (dbMediaSource.getType().isHbase()){
-//            	Admin admin = dataSourceCreator.getHBaseConnection(dbMediaSource).getAdmin();
-//            	if (!admin.tableExists(TableName.valueOf(name))) {
-//            		return SELECT_FAIL;
-//            	}
-//            }else if (dbMediaSource.getType().isHDFSArvo()){
-//            	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
-//            	if (!fs.exists(new Path(name))){
-//            		return SELECT_FAIL;
-//            	}
-//            }else if (dbMediaSource.getType().isKafka()){
-//            	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
-//            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
-//            }else{
+            if (dbMediaSource.getType().isCassandra()){
+            	Cluster cluster=dataSourceCreator.getCluster(dbMediaSource);
+            	Session session=cluster.connect();
+            	
+            	BoundStatement bindStatement =null;
+            	try{
+            		bindStatement=session.prepare( "select keyspace_name,table_name from system_schema.tables where keyspace_name=? and table_name=?")
+            			.bind(namespace,name);
+            	}catch(InvalidQueryException iqe){
+            		bindStatement=session.prepare( "select keyspace_name,columnfamily_name from system.schema_columnfamilies where keyspace_name=? and columnfamily_name=? ")
+                			.bind(namespace,name);
+            	}
+            	com.datastax.driver.core.ResultSet resultSet = session.execute(bindStatement);
+            	if (!resultSet.iterator().hasNext()) {
+            		session.close();
+            		return SELECT_FAIL;
+            	}
+            	session.close();
+            }else if (dbMediaSource.getType().isElasticSearch()){
+            	Client client=dataSourceCreator.getClient(source);
+            	String[] urls=StringUtils.split(dbMediaSource.getUrl(), "||");
+            	TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(urls[2]).setTypes(name).execute().actionGet();
+            	if (!typeResp.isExists()){
+            		 return SELECT_FAIL;
+            	}
+            }else if (dbMediaSource.getType().isHBase()){
+            	Admin admin = dataSourceCreator.getHBaseConnection(dbMediaSource).getAdmin();
+            	if (!admin.tableExists(TableName.valueOf(name))) {
+            		return SELECT_FAIL;
+            	}
+            }else if (dbMediaSource.getType().isHDFSArvo()){
+            	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
+            	if (!fs.exists(new Path(name))){
+            		return SELECT_FAIL;
+            	}
+            }else if (dbMediaSource.getType().isKafka()){
+            	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
+            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
+            }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
 	            ModeValue namespaceValue = ConfigHelper.parseMode(namespace);
 	            ModeValue nameValue = ConfigHelper.parseMode(name);
@@ -291,12 +294,12 @@ public class DataSourceChecker {
 	            String tempName = nameValue.getSingleValue();
 	            try {
 	            	Table table =null;
-//	            	if (dbMediaSource.getType().isGreenplum()){
-//	            		String[] sts=StringUtils.split(tempName, ".");
-//	            		table=DdlUtils.findTable(new JdbcTemplate(dataSource), tempNamespace, sts[0], sts[1]);
-//	            	}else{
+	            	if (dbMediaSource.getType().isGreenPlum()){
+	            		String[] sts=StringUtils.split(tempName, ".");
+	            		table=DdlUtils.findTable(new JdbcTemplate(dataSource), tempNamespace, sts[0], sts[1]);
+	            	}else{
 	            		table=DdlUtils.findTable(new JdbcTemplate(dataSource), tempNamespace, tempNamespace, tempName);
-//	            	}
+	            	}
 	                if (table == null) {
 	                    return SELECT_FAIL;
 	                }
@@ -307,7 +310,7 @@ public class DataSourceChecker {
 	                logger.error("check error!", e);
 	                return SELECT_FAIL;
 	            }
-//            }
+            }
         } catch (Exception e) {
 			e.printStackTrace();
 			return SELECT_FAIL;
@@ -327,58 +330,58 @@ public class DataSourceChecker {
             DbMediaSource dbMediaSource = (DbMediaSource) source;
             final List<String> matchSchemaTables = new ArrayList<String>();
             matchSchemaTables.add("Find schema and tables:");
-//            if (dbMediaSource.getType().isCassandra()){
-//            	Cluster cluster=dataSourceCreator.getCluster(dbMediaSource);
-//            	Session session=cluster.connect();
-//            	BoundStatement bindStatement =null;
-//            	boolean isv3=true;
-//            	try{
-//            		bindStatement=session.prepare( "select keyspace_name,table_name from system_schema.tables where keyspace_name=? and table_name=?")
-//            			.bind(namespace,name);
-//            	}catch(InvalidQueryException iqe){
-//                    bindStatement=session.prepare( "select keyspace_name,columnfamily_name from system.schema_columnfamilies where keyspace_name=? and columnfamily_name=? ")
-//                        			.bind(namespace,name);
-//                    isv3=false;
-//                }
-//            	com.datastax.driver.core.ResultSet resultSet = session.execute(bindStatement);
-//            	if (!resultSet.iterator().hasNext()) {
-//            		session.close();
-//            		return TABLE_FAIL;
-//            	}
-//            	for(Row row:resultSet){
-//            		if (isv3){
-//            			matchSchemaTables.add(row.getString("keyspace_name") + "." + row.getString("table_name"));
-//            		}else{
-//            			matchSchemaTables.add(row.getString("keyspace_name") + "." + row.getString("columnfamily_name"));
-//            		}
-//            	}
-//            }else if (dbMediaSource.getType().isElasticSearch()){
-//            	Client client=dataSourceCreator.getClient(source);
-//            	TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(namespace).setTypes(name).execute().actionGet();
-//            	if (!typeResp.isExists()){
-//            		 return TABLE_FAIL;
-//            	}else{
-//            		 matchSchemaTables.add(namespace + "." + name);
-//            	}
-//            }else if (dbMediaSource.getType().isHbase()){
-//            	Admin admin = dataSourceCreator.getHBaseConnection(dbMediaSource).getAdmin();
-//            	if (!admin.tableExists(TableName.valueOf(name))) {
-//            		return TABLE_FAIL;
-//            	}else{
-//            		matchSchemaTables.add( name);
-//            	}
-//            }else if (dbMediaSource.getType().isHDFSArvo()){
-//            	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
-//            	if (!fs.exists(new Path(name))){
-//            		return TABLE_FAIL;
-//            	}else{
-//            		matchSchemaTables.add( name);
-//            	}
-//            }else if (dbMediaSource.getType().isKafka()){
-//            	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
-//            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
-//            	matchSchemaTables.add(name);
-//            }else{
+            if (dbMediaSource.getType().isCassandra()){
+            	Cluster cluster=dataSourceCreator.getCluster(dbMediaSource);
+            	Session session=cluster.connect();
+            	BoundStatement bindStatement =null;
+            	boolean isv3=true;
+            	try{
+            		bindStatement=session.prepare( "select keyspace_name,table_name from system_schema.tables where keyspace_name=? and table_name=?")
+            			.bind(namespace,name);
+            	}catch(InvalidQueryException iqe){
+                    bindStatement=session.prepare( "select keyspace_name,columnfamily_name from system.schema_columnfamilies where keyspace_name=? and columnfamily_name=? ")
+                        			.bind(namespace,name);
+                    isv3=false;
+                }
+            	com.datastax.driver.core.ResultSet resultSet = session.execute(bindStatement);
+            	if (!resultSet.iterator().hasNext()) {
+            		session.close();
+            		return TABLE_FAIL;
+            	}
+            	for(Row row:resultSet){
+            		if (isv3){
+            			matchSchemaTables.add(row.getString("keyspace_name") + "." + row.getString("table_name"));
+            		}else{
+            			matchSchemaTables.add(row.getString("keyspace_name") + "." + row.getString("columnfamily_name"));
+            		}
+            	}
+            }else if (dbMediaSource.getType().isElasticSearch()){
+            	Client client=dataSourceCreator.getClient(source);
+            	TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(namespace).setTypes(name).execute().actionGet();
+            	if (!typeResp.isExists()){
+            		 return TABLE_FAIL;
+            	}else{
+            		 matchSchemaTables.add(namespace + "." + name);
+            	}
+            }else if (dbMediaSource.getType().isHBase()){
+            	Admin admin = dataSourceCreator.getHBaseConnection(dbMediaSource).getAdmin();
+            	if (!admin.tableExists(TableName.valueOf(name))) {
+            		return TABLE_FAIL;
+            	}else{
+            		matchSchemaTables.add( name);
+            	}
+            }else if (dbMediaSource.getType().isHDFSArvo()){
+            	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
+            	if (!fs.exists(new Path(name))){
+            		return TABLE_FAIL;
+            	}else{
+            		matchSchemaTables.add( name);
+            	}
+            }else if (dbMediaSource.getType().isKafka()){
+            	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
+            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
+            	matchSchemaTables.add(name);
+            }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
 	            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 	            List<String> schemaList;
@@ -386,16 +389,16 @@ public class DataSourceChecker {
 	                ModeValue mode = ConfigHelper.parseMode(namespace);
 	                String schemaPattern = ConfigHelper.makeSQLPattern(mode, namespace);
 	                final ModeValueFilter modeValueFilter = ConfigHelper.makeModeValueFilter(mode, namespace);
-//	                if (source.getType().isOracle()||source.getType().isGreenplum()) {
-//	                    schemaList = Arrays.asList(namespace);
-//	                } else {
+	                if (source.getType().isOracle()||source.getType().isGreenPlum()) {
+	                    schemaList = Arrays.asList(namespace);
+	                } else {
 	                    schemaList = DdlUtils.findSchemas(jdbcTemplate, schemaPattern, new DdlSchemaFilter() {
 	                        @Override
 	                        public boolean accept(String schemaName) {
 	                            return modeValueFilter.accept(schemaName);
 	                        }
 	                    });
-//	                }
+	                }
 	            }
 	            if (schemaList != null) {
 	            	ModeValue mode = ConfigHelper.parseMode(name);
@@ -404,13 +407,13 @@ public class DataSourceChecker {
 	                for (String schema : schemaList) {
 	                	String sname=schema;
 	                	String tname=tableNamePattern;
-//	                	if (dbMediaSource.getType().isGreenplum()){
-//		            		String[] sts=StringUtils.split(name, ".");
-//		            		sname=sts[0];
-//		            		mode = ConfigHelper.parseMode(sts[1]);
-//		            		tname=ConfigHelper.makeSQLPattern(mode, sts[1]);
-//		            		modeValueFilter = ConfigHelper.makeModeValueFilter(mode, tname);
-//		            	}
+	                	if (dbMediaSource.getType().isGreenPlum()){
+		            		String[] sts=StringUtils.split(name, ".");
+		            		sname=sts[0];
+		            		mode = ConfigHelper.parseMode(sts[1]);
+		            		tname=ConfigHelper.makeSQLPattern(mode, sts[1]);
+		            		modeValueFilter = ConfigHelper.makeModeValueFilter(mode, tname);
+		            	}
 	                	final ModeValueFilter mvfilter=modeValueFilter;
 	                    DdlUtils.findTables(jdbcTemplate, schema, sname, tname, null, new DdlTableNameFilter() {
 	                        @Override
@@ -423,7 +426,7 @@ public class DataSourceChecker {
 	                    });
 	                }
 	            }
-//            }
+            }
             if (matchSchemaTables.size() == 1) {
                 return TABLE_FAIL;
             }

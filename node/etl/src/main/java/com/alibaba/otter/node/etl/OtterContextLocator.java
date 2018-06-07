@@ -44,7 +44,7 @@ public class OtterContextLocator {
                     beanFactory.setAllowBeanDefinitionOverriding(false);
                 }
             };
-        } catch (RuntimeException e) {
+        } catch (RuntimeException e) {e.printStackTrace();
             throw new ConfigException("ERROR ## ", e);
         }
     }

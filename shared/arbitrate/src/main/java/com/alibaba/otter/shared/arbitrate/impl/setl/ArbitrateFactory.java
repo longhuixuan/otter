@@ -17,6 +17,7 @@
 package com.alibaba.otter.shared.arbitrate.impl.setl;
 
 import java.lang.reflect.Constructor;
+import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.BeansException;
@@ -37,119 +38,89 @@ import com.google.common.cache.LoadingCache;
  */
 public class ArbitrateFactory implements ApplicationContextAware {
 
-    private static ApplicationContext            context = null;
-    // 两层的Map接口，第一层为pipelineId，第二层为具体的资源类型class
-    private static LoadingCache<Long, LoadingCache<Class, Object>> cache   =  CacheBuilder.newBuilder().maximumSize(1000)
+	private static ApplicationContext context = null;
+	// 两层的Map接口，第一层为pipelineId，第二层为具体的资源类型class
+	private static LoadingCache<Long, LoadingCache<Class, Object>> cache = CacheBuilder.newBuilder().maximumSize(1000)
 			.build(new CacheLoader<Long, LoadingCache<Class, Object>>() {
+				@Override
+				public LoadingCache<Class, Object> load(Long pipelineId) throws Exception {
+					return CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<Class, Object>() {
+						@Override
+						public Object load(Class instanceClass) throws Exception {
+							return newInstance(pipelineId, instanceClass);
+						}
+					});
+				}
+			});
 
-                                                             public LoadingCache<Class, Object> load(final Long pipelineId) {
-                                                                 return  CacheBuilder.newBuilder().maximumSize(1000)
-                                                             			.build(new CacheLoader<Class, Object>() {
+	// new MapMaker().makeComputingMap(new Function<Long, Map<Class, Object>>()
+	// {
+	//
+	// public Map<Class, Object> apply(final Long pipelineId) {
+	// return new MapMaker().makeComputingMap(new Function<Class, Object>() {
+	//
+	// public Object apply(Class instanceClass) {
+	// return newInstance(pipelineId, instanceClass);
+	// }
+	// });
+	// }
+	// });
 
-                                                                     public Object load(Class instanceClass) {
-                                                                         return newInstance(pipelineId, instanceClass);
-                                                                     }
-                                                                 });
-                                                             }
-                                                         });
+	private static Object newInstance(Long pipelineId, Class instanceClass) {
+		Object obj = newInstance(instanceClass, pipelineId);// 通过反射调用构造函数进行初始化
+		autowire(obj);
+		return obj;
+	}
 
-    private static Object newInstance(Long pipelineId, Class instanceClass) {
-        Object obj = newInstance(instanceClass, pipelineId);// 通过反射调用构造函数进行初始化
-        autowire(obj);
-        return obj;
-    }
-
-    /**
-     * 指定对应的pipelineId，获取对应的仲裁资源类型<br/>
-     * 要求对应的instanceClass，都必须支持以pipelineId做为唯一参数的构造函数
-     */
-    public static <T extends ArbitrateLifeCycle> T getInstance(Long pipelineId, Class<T> instanceClass) {
-        // Map<Class, Object> resources = cache.get(pipelineId);
-        // if (resources == null) {
-        // synchronized (cache) {// 锁住一下
-        // if (!cache.containsKey(pipelineId)) {// double check
-        // resources = new ConcurrentHashMap<Class, Object>();
-        // cache.put(pipelineId, resources);
-        // } else {
-        // resources = cache.get(pipelineId);
-        // }
-        // }
-        // }
-        // Object obj = resources.get(instanceClass);
-        // if (obj == null) {
-        // synchronized (instanceClass) {// 锁住class对象
-        // if (!resources.containsKey(instanceClass)) { // double check
-        // obj = newInstance(instanceClass, pipelineId);// 通过反射调用构造函数进行初始化
-        // autowire(obj);
-        // resources.put(instanceClass, obj);
-        // } else {
-        // obj = resources.get(instanceClass);
-        // }
-        // }
-        // }
-        // return (T) obj;
-
-        try {
+	/**
+	 * 指定对应的pipelineId，获取对应的仲裁资源类型<br/>
+	 * 要求对应的instanceClass，都必须支持以pipelineId做为唯一参数的构造函数
+	 */
+	public static <T extends ArbitrateLifeCycle> T getInstance(Long pipelineId, Class<T> instanceClass) {
+		try {
 			return (T) cache.get(pipelineId).get(instanceClass);
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
-    }
+	}
 
-    public static void autowire(Object obj) {
-        // 重新注入一下对象
-        context.getAutowireCapableBeanFactory().autowireBeanProperties(obj,
-                                                                       AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
-                                                                       true);
-    }
+	public static void autowire(Object obj) {
+		// 重新注入一下对象
+		context.getAutowireCapableBeanFactory().autowireBeanProperties(obj, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
+				true);
+	}
 
-    public static void destory() {
-        for (Long pipelineId : cache.asMap().keySet()) {
-            destory(pipelineId);
-        }
-    }
-
-    /**
-     * 销毁和释放对应pipelineId的仲裁资源
-     * 
-     * @param pipelineId
-     */
-    public static void destory(Long pipelineId) {
-    	try {
-			LoadingCache<Class, Object> resources = cache.get(pipelineId);
-			if (resources != null) {
-				for (Object obj : resources.asMap().values()) {
-					 if (obj instanceof ArbitrateLifeCycle) {
-		                    ArbitrateLifeCycle lifeCycle = (ArbitrateLifeCycle) obj;
-		                    lifeCycle.destory();// 调用销毁方法
-		                }
-				}
-				resources.invalidateAll();
-				resources.cleanUp();
-			}
-		} catch (ExecutionException e1) {
-			e1.printStackTrace();
+	public static void destory() {
+		for (Long pipelineId : cache.asMap().keySet()) {
+			destory(pipelineId);
 		}
-//    	LoadingCache<Class, Object> resources = cache.remove(pipelineId);
-//        if (resources != null) {
-//            Collection collection = resources.asMap().values();
-//            for (Object obj : collection) {
-//                if (obj instanceof ArbitrateLifeCycle) {
-//                    ArbitrateLifeCycle lifeCycle = (ArbitrateLifeCycle) obj;
-//                    lifeCycle.destory();// 调用销毁方法
-//                }
-//            }
-//        }
-    }
+	}
 
-    /**
-     * 销毁和释放对应pipelineId的仲裁资源
-     * 
-     * @param pipelineId
-     */
-    public static <T extends ArbitrateLifeCycle> void destory(Long pipelineId, Class<T> instanceClass) {
-    	try {
+	/**
+	 * 销毁和释放对应pipelineId的仲裁资源
+	 * 
+	 * @param pipelineId
+	 */
+	public static void destory(Long pipelineId) {
+		LoadingCache<Class, Object> resources = cache.asMap().remove(pipelineId);
+		if (resources != null) {
+			Collection collection = resources.asMap().values();
+			for (Object obj : collection) {
+				if (obj instanceof ArbitrateLifeCycle) {
+					ArbitrateLifeCycle lifeCycle = (ArbitrateLifeCycle) obj;
+					lifeCycle.destory();// 调用销毁方法
+				}
+			}
+		}
+	}
+
+	/**
+	 * 销毁和释放对应pipelineId的仲裁资源
+	 * 
+	 * @param pipelineId
+	 */
+	public static <T extends ArbitrateLifeCycle> void destory(Long pipelineId, Class<T> instanceClass) {
+		try {
 			LoadingCache<Class, Object> resources = cache.get(pipelineId);
 			if (resources != null) {
 				Object obj = resources.get(instanceClass);
@@ -161,38 +132,30 @@ public class ArbitrateFactory implements ApplicationContextAware {
 		} catch (ExecutionException e) {
 			e.printStackTrace();
 		}
-//    	LoadingCache<Class, Object> resources = cache.get(pipelineId);
-//        if (resources != null) {
-//            Object obj = resources.remove(instanceClass);
-//            if (obj instanceof ArbitrateLifeCycle) {
-//                ArbitrateLifeCycle lifeCycle = (ArbitrateLifeCycle) obj;
-//                lifeCycle.destory();// 调用销毁方法
-//            }
-//        }
-    }
+	}
 
-    // ==================== helper method =======================
+	// ==================== helper method =======================
 
-    private static Object newInstance(Class type, Long pipelineId) {
-        Constructor _constructor = null;
-        Object[] _constructorArgs = new Object[1];
-        _constructorArgs[0] = pipelineId;
+	private static Object newInstance(Class type, Long pipelineId) {
+		Constructor _constructor = null;
+		Object[] _constructorArgs = new Object[1];
+		_constructorArgs[0] = pipelineId;
 
-        try {
-            _constructor = type.getConstructor(new Class[] { Long.class });
-        } catch (NoSuchMethodException e) {
-            throw new ArbitrateException("Constructor_notFound");
-        }
+		try {
+			_constructor = type.getConstructor(new Class[] { Long.class });
+		} catch (NoSuchMethodException e) {
+			throw new ArbitrateException("Constructor_notFound");
+		}
 
-        try {
-            return _constructor.newInstance(_constructorArgs);
-        } catch (Exception e) {
-            throw new ArbitrateException("Constructor_newInstance_error", e);
-        }
+		try {
+			return _constructor.newInstance(_constructorArgs);
+		} catch (Exception e) {
+			throw new ArbitrateException("Constructor_newInstance_error", e);
+		}
 
-    }
+	}
 
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        context = applicationContext;
-    }
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		context = applicationContext;
+	}
 }

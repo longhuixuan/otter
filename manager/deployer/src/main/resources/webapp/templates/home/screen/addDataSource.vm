@@ -6,9 +6,32 @@ $control.setTemplate("home:navigation.vm")
 <script language="javascript">
 <!--
 	changeNav("datamedia");
-	function changeform(){
-		
+	
+function changeform(){
+	if (addSourceForm.sourceType.value=='KAFKA'){
+		$("#dsUrl").html("zookeeper hosts:");
+	}else if (addSourceForm.sourceType.value=='HBASE'){
+		$("#dsUrl").html("hbase-site:");
+	}else if (addSourceForm.sourceType.value=='ELASTICSEARCH'){
+		$("#dsUrl").html("hosts:");
+	}else if (addSourceForm.sourceType.value=='CASSANDRA'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='HDFS-ARVO'){
+		$("#dsUrl").html("hdfs-site:");
+	}else if (addSourceForm.sourceType.value=='MYSQL'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='ORACLE'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='GREENPLUM'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='HIVE'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='PRESTODB'){
+		$("#dsUrl").html("url:");
+	}else if (addSourceForm.sourceType.value=='ROECKETMQ'){
+		$("#dsUrl").html("url:");
 	}
+}
 //-->
 </script>
 #macro (addDataSourceMessage $field)
@@ -32,7 +55,7 @@ $control.setTemplate("home:navigation.vm")
       <tr> 
         <th width="300">数据源名字：</th>
         <td width="329">
-			<input type="text" name="$dataMediaSourceGroup.name.key" value="$!dataMediaSourceGroup.name.value" style="width:400px;"/><span class="red">*</span>
+			<input type="text" id="sourceName" name="$dataMediaSourceGroup.name.key" value="$!dataMediaSourceGroup.name.value" class="setting_input"/><span class="red">*</span>
 			<br />
 			<span class="red">#addDataSourceMessage ($dataMediaSourceGroup.name)</span>
 		</td>
@@ -40,29 +63,61 @@ $control.setTemplate("home:navigation.vm")
       <tr> 
         <th>类型：</th>
         <td>
-            <select id="sourceType"  style="width:400px;" name="$dataMediaSourceGroup.type.key" onchange="changeform();" >
-            #foreach( $ds in $DataMediaSourceTypes)
-    			<option value="$ds">$ds</option>
-			#end 
+            <select id="sourceType" name="$dataMediaSourceGroup.type.key" onchange="changeform();" >
+            <option value="ROECKETMQ">ROECKETMQ</option>
+            <option value="HIVE">HIVE</option>
+            <option value="PRESTODB">PRESTODB</option>
+            <option value="HDFS_ARVO">HDFS_ARVO</option>
+            <option value="KAFKA">KAFKA</option>
+            <option value="HBASE">HBASE</option>
+            <option value="ELASTICSEARCH">ELASTICSEARCH</option>
+            <option value="CASSANDRA">CASSANDRA</option>
+            <option value="MYSQL">MySQL</option>
+            <option value="ORACLE">Oracle</option>
+            <option value="GREENPLUM">GREENPLUM</option>
 			</select><span class="red">*</span>
         </td>
       </tr>
-     
-	  <tr> 
-        <th id="dsUrl">数据源配置属性(JSON)：</th>
+      <tr> 
+        <th>用户名：</th>
         <td>
-			<textarea id="sourcePropertiesStr" rows="10" name="$dataMediaSourceGroup.propertiesStr.key" style="width:400px;"></textarea>
+			<input id="sourceUserName" name="$dataMediaSourceGroup.username.key" value="$!dataMediaSourceGroup.username.value" type="text" class="setting_input"/><span class="red">*</span>
+			<br />
+			<span class="red">#addDataSourceMessage ($dataMediaSourceGroup.username)</span>
+		</td>
+      </tr>
+	  <tr> 
+        <th>密码：</th>
+        <td>
+			<input id="sourcePassword" name="$dataMediaSourceGroup.password.key" type="password" class="setting_input"/>
+			<br />
+			<span class="red">#addDataSourceMessage ($dataMediaSourceGroup.password)</span>
+		</td>
+      </tr>
+	  <tr> 
+        <th id="dsUrl">zookeeper hosts：</th>
+        <td>
+			<input id="sourceUrl" name="$dataMediaSourceGroup.url.key" value="$!dataMediaSourceGroup.url.value" type="text" class="setting_input"/>
 			<br />
 			<span class="red">#addDataSourceMessage ($dataMediaSourceGroup.url)</span>
 		</td>
       </tr>
-	 
+	  #**
+	  <tr> 
+        <th>StorePath：</th>
+        <td>
+			<input id="sourceStorePath" name="$dataMediaSourceGroup.storePath.key" value="$!dataMediaSourceGroup.storePath.value" type="text" class="setting_input"/><span class="red">Napoli</span>
+			<br />
+			<span class="red">#addDataSourceMessage ($dataMediaSourceGroup.storePath)</span>
+		</td>
+      </tr>
+	  *#
 	  <tr> 
         <th>编码：</th>
         <td>
-			<select id="sourceEncode" name="$dataMediaSourceGroup.encode.key"  style="width:400px;" > 
-				<option value="UTF8" #if($!dataMediaSourceGroup.encode.value == 'UTF8') selected  #end>UTF8</option>
+			<select id="sourceEncode" name="$dataMediaSourceGroup.encode.key"  style="width:200px;" > 
 				<option value="GBK" #if($!dataMediaSourceGroup.encode.value == 'GBK') selected  #end>GBK</option>
+				<option value="UTF8" #if($!dataMediaSourceGroup.encode.value == 'UTF8') selected  #end>UTF8</option>
 				<option value="UTF8MB4" #if($!dataMediaSourceGroup.encode.value == 'UTF8MB4') selected  #end>UTF8MB4</option>
 				<option value="ISO-8859-1" #if($!dataMediaSourceGroup.encode.value == 'ISO-8859-1') selected  #end>ISO-8859-1</option>
             </select><span class="red">*</span>

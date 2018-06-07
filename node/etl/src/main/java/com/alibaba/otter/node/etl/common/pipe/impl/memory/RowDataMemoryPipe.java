@@ -69,7 +69,6 @@ public class RowDataMemoryPipe extends AbstractMemoryPipe<DbBatch, MemoryPipeKey
         try {
 			return cache.get(key);
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
     }

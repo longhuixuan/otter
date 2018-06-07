@@ -38,78 +38,84 @@ import com.google.common.cache.LoadingCache;
  */
 public class ZooKeeperClient {
 
-	private static String cluster;
-	private static int sessionTimeout = 10 * 1000;
-	private static LoadingCache<Long, ZkClientx> clients = CacheBuilder.newBuilder().maximumSize(1000)
+    private static String               cluster;
+    private static int                  sessionTimeout = 10 * 1000;
+    private static LoadingCache<Long, ZkClientx> clients        =CacheBuilder.newBuilder().maximumSize(1000)
 			.build(new CacheLoader<Long, ZkClientx>() {
 
-				public ZkClientx load(Long pipelineId) {
-					return createClient();
-				}
-			});
-	private static Long defaultId = 0L;
+				@Override
+				public ZkClientx load(Long paramK) throws Exception {
+					 return createClient();
+				}});
+    		
+//    		new MapMaker().makeComputingMap(new Function<Long, ZkClientx>() {
+//
+//                                                           public ZkClientx apply(Long pipelineId) {
+//                                                               return createClient();
+//                                                           }
+//                                                       });
+    private static Long                 defaultId      = 0L;
 
-	/**
-	 * 获取对应的zookeeper客户端
-	 */
-	public static ZkClientx getInstance() {
-		return getInstance(defaultId);
-	}
+    /**
+     * 获取对应的zookeeper客户端
+     */
+    public static ZkClientx getInstance() {
+        return getInstance(defaultId);
+    }
 
-	/**
-	 * 根据pipelineId获取对应的zookeeper客户端，每个pipelineId可以独立一个zookeeper链接，保证性能
-	 */
-	public static ZkClientx getInstance(Long pipelineId) {
-		try {
+    /**
+     * 根据pipelineId获取对应的zookeeper客户端，每个pipelineId可以独立一个zookeeper链接，保证性能
+     */
+    public static ZkClientx getInstance(Long pipelineId) {
+        try {
 			return clients.get(pipelineId);
 		} catch (ExecutionException e) {
-			e.printStackTrace();
 			return null;
 		}
-	}
+    }
 
-	public static void destory() {
-		for (ZkClientx zkClient : clients.asMap().values()) {
-			zkClient.close();
-		}
-	}
+    public static void destory() {
+        for (ZkClientx zkClient : clients.asMap().values()) {
+            zkClient.close();
+        }
+    }
 
-	public static void registerNotification(final SessionExpiredNotification notification) {
-		getInstance().subscribeStateChanges(new IZkStateListener() {
+    public static void registerNotification(final SessionExpiredNotification notification) {
+        getInstance().subscribeStateChanges(new IZkStateListener() {
 
-			public void handleStateChanged(KeeperState state) throws Exception {
+            public void handleStateChanged(KeeperState state) throws Exception {
 
-			}
+            }
 
-			public void handleNewSession() throws Exception {
-				notification.notification();
-			}
-		});
+            public void handleNewSession() throws Exception {
+                notification.notification();
+            }
+        });
 
-	}
+    }
 
-	private static ZkClientx createClient() {
-		List<String> serveraddrs = getServerAddrs();
-		return new ZkClientx(StringUtils.join(serveraddrs, ","), sessionTimeout);
-	}
+    private static ZkClientx createClient() {
+        List<String> serveraddrs = getServerAddrs();
+        return new ZkClientx(StringUtils.join(serveraddrs, ","), sessionTimeout);
+    }
 
-	/**
-	 * 从当前的node信息中获取对应的zk集群信息
-	 */
-	private static List<String> getServerAddrs() {
-		List<String> result = ArbitrateConfigUtils.getServerAddrs();
-		if (result == null || result.size() == 0) {
-			result = Arrays.asList(cluster);
-		}
-		return result;
-	}
+    /**
+     * 从当前的node信息中获取对应的zk集群信息
+     */
+    private static List<String> getServerAddrs() {
+        List<String> result = ArbitrateConfigUtils.getServerAddrs();
+        if (result == null || result.size() == 0) {
+            result = Arrays.asList(cluster);
+        }
+        return result;
+    }
 
-	public void setCluster(String cluster) {
-		ZooKeeperClient.cluster = cluster;
-	}
+    public void setCluster(String cluster) {
+        ZooKeeperClient.cluster = cluster;
+    }
 
-	public void setSessionTimeout(int timeout) {
-		ZooKeeperClient.sessionTimeout = timeout;
-	}
+    public void setSessionTimeout(int timeout) {
+        ZooKeeperClient.sessionTimeout = timeout;
+    }
 
 }

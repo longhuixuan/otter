@@ -23,6 +23,7 @@ public abstract class AbstraNoSQLDialect implements DbDialect {
 	protected DataSourceService dataSourceService;
 	protected LoadingCache<List<String>, Table> tables;
 
+	
 	@Override
 	public String getDefaultSchema() {
 		return null;
@@ -44,23 +45,11 @@ public abstract class AbstraNoSQLDialect implements DbDialect {
 	}
 
 	@Override
-	public boolean isDRDS() {
-		return false;
-	}
-	
-
-	@Override
-	public String getShardColumns(String schema, String table) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public TransactionTemplate getTransactionTemplate() {
 		return null;
 	}
 
-	public boolean isNoSqlDB() {
+	public boolean isNoSqlDB(){
 		return true;
 	}
 

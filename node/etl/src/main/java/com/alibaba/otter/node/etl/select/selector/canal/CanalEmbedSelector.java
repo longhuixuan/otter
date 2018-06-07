@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.etl.select.selector.canal;
 
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -259,9 +260,12 @@ public class CanalEmbedSelector implements OtterSelector {
         Message<EventData> result = new Message<EventData>(message.getId(), eventDatas);
         // 更新一下最后的entry时间，包括被过滤的数据
         if (!CollectionUtils.isEmpty(message.getEntries())) {
-            long lastEntryTime = message.getEntries().get(message.getEntries().size() - 1).getHeader().getExecuteTime();
+        	Entry entry=message.getEntries().get(message.getEntries().size() - 1);
+            long lastEntryTime = entry.getHeader().getExecuteTime();
             if (lastEntryTime > 0) {// oracle的时间可能为0
                 this.lastEntryTime = lastEntryTime;
+                logger.info(entry.getEntryType().name()+" 当前时间："+new Timestamp(System.currentTimeMillis())
+                		+"  最后日志时间："+new Timestamp(lastEntryTime)+" 延时时间："+(System.currentTimeMillis()-lastEntryTime)+" ms");
             }
         }
 

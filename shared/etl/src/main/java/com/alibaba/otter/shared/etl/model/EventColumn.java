@@ -19,6 +19,7 @@ package com.alibaba.otter.shared.etl.model;
 import java.io.Serializable;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
 
@@ -57,7 +58,9 @@ public class EventColumn implements Serializable {
      */
     private boolean           isUpdate         = true;
     
+    @JsonIgnore
     private String pkFunctionName="ori";//主键key生成函数
+    @JsonIgnore
     public String getPkFunctionName() {
 		return pkFunctionName;
 	}
@@ -66,7 +69,7 @@ public class EventColumn implements Serializable {
 		this.pkFunctionName = pkFunctionName;
 	}
 
-    public int getColumnType() {
+	public int getColumnType() {
         return columnType;
     }
 

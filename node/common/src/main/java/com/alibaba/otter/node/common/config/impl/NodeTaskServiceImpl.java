@@ -208,9 +208,7 @@ public class NodeTaskServiceImpl implements NodeTaskService, InitializingBean {
         // 合并一下target中特有的记录，取一下反操作，表示要关闭
         for (NodeTask task : allTasks) {
             Pipeline pipeline = task.getPipeline();
-            if (pipeline.getChannelId().equals(channel.getId()) && !pipelineIds.contains(pipeline.getId())) {
-                // /是同一个channel，但对应的pipeline不在列表里
-                // 处理pipeline删除
+            if (pipeline.getChannelId().equals(channel.getId()) && !pipelineIds.contains(pipeline.getId())) {//是同一个channel，但对应的pipeline不在列表里 处理pipeline删除
                 NodeTask deletePipelineTask = new NodeTask();
                 deletePipelineTask.setPipeline(pipeline);
 

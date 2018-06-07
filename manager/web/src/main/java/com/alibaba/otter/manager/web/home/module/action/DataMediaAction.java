@@ -60,11 +60,13 @@ public class DataMediaAction extends AbstractAction {
         DataMedia dataMedia = new DataMedia();
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
-//        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
-//        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHbase()||dataMediaSource.getType().isHDFSArvo()
-//        		||dataMediaSource.getType().isGreenplum()||dataMediaSource.getType().isKafka()) {
+        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
+        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFSArvo()
+        		||dataMediaSource.getType().isGreenPlum()||dataMediaSource.getType().isKafka()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);
-//        }
+        } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
+            dataMedia.setSource((MqMediaSource) dataMediaSource);
+        }
 
         try {
             dataMediaService.create(dataMedia);
@@ -95,11 +97,13 @@ public class DataMediaAction extends AbstractAction {
         DataMedia dataMedia = new DataMedia();
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
-//        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
-//        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHbase()||dataMediaSource.getType().isHDFSArvo()
-//        		||dataMediaSource.getType().isKafka()||dataMediaSource.getType().isGreenplum()) {
+        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
+        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFSArvo()
+        		||dataMediaSource.getType().isKafka()||dataMediaSource.getType().isGreenPlum()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);
-//        } 
+        } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
+            dataMedia.setSource((MqMediaSource) dataMediaSource);
+        }
 
         try {
             dataMediaService.modify(dataMedia);

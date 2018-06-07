@@ -18,6 +18,7 @@ package com.alibaba.otter.node.common.config.impl;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -83,8 +84,8 @@ public class ConfigClientServiceImpl implements InternalConfigClientService, Arb
 			return channelCache.get(channelId);
 		} catch (ExecutionException e) {
 			e.printStackTrace();
-			return null;
 		}
+		return null;
 	}
 
 	public Pipeline findOppositePipeline(Long pipelineId) {
@@ -132,27 +133,28 @@ public class ConfigClientServiceImpl implements InternalConfigClientService, Arb
 
 		this.nid = Long.valueOf(nid);
 
-		channelMapping = CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<Long, Long>() {
+		channelMapping = CacheBuilder.newBuilder().maximumSize(1000) // 最多可以缓存1000个key
+				.expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<Long, Long>() {
+					@Override
+					public Long load(Long pipelineId) throws Exception {
+						// 处理下pipline -> channel映射关系不存在的情况
+						FindChannelEvent event = new FindChannelEvent();
+						event.setPipelineId(pipelineId);
+						try {
+							Object obj = nodeCommmunicationClient.callManager(event);
+							if (obj != null && obj instanceof Channel) {
+								Channel channel = (Channel) obj;
+								updateMapping(channel, pipelineId);// 排除下自己
+								channelCache.put(channel.getId(), channel);// 更新下channelCache
+								return channel.getId();
+							}
+						} catch (Exception e) {
+							logger.error("call_manager_error", event.toString(), e);
+						}
 
-			public Long load(Long pipelineId) {
-				// 处理下pipline -> channel映射关系不存在的情况
-				FindChannelEvent event = new FindChannelEvent();
-				event.setPipelineId(pipelineId);
-				try {
-					Object obj = nodeCommmunicationClient.callManager(event);
-					if (obj != null && obj instanceof Channel) {
-						Channel channel = (Channel) obj;
-						updateMapping(channel, pipelineId);// 排除下自己
-						channelCache.put(channel.getId(), channel);// 更新下channelCache
-						return channel.getId();
+						throw new ConfigException("No Such Channel by pipelineId[" + pipelineId + "]");
 					}
-				} catch (Exception e) {
-					logger.error("call_manager_error", event.toString(), e);
-				}
-
-				throw new ConfigException("No Such Channel by pipelineId[" + pipelineId + "]");
-			}
-		});
+				});
 
 		nodeCache = new RefreshMemoryMirror<Long, Node>(timeout, new ComputeFunction<Long, Node>() {
 
