@@ -9,10 +9,10 @@
 	<groupId>com.alibaba.otter</groupId>
 	<artifactId>otter</artifactId>
 	<packaging>pom</packaging>
-	<name>otter</name>
+	<name>otter-extend</name>
 	<version>4.2.14-SNAPSHOT</version>
 	<inceptionYear>2011</inceptionYear>
-	<url>http://github.com/alibaba/otter</url>
+	<url>https://github.com/joezxh/otter</url>
 	<organization>
 		<name>alibaba</name>
 		<url>http://www.alibaba.com</url>
