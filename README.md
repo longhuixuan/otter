@@ -1,7 +1,7 @@
 <h1>
 otter-extend
 </h1>
-<p>修改自阿里巴巴的Otter，输出sink支持kafka，rocketMq,Elasticsearch,HBASE,Cassandra, HDFS-Arvo格式,HIVE等</p>
+<p>修改自阿里巴巴的Otter，输出sink支持kafka，rocketMq,Elasticsearch,HBASE,Cassandra, HDFS-Arvo格式,HIVE等，使用帮助参考wiki</p>
 <h1>
 <a name="%E9%A1%B9%E7%9B%AE%E8%83%8C%E6%99%AF" class="anchor" href="#%E9%A1%B9%E7%9B%AE%E8%83%8C%E6%99%AF"><span class="octicon octicon-link"></span></a>项目背景</h1>
 <p>
