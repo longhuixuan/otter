@@ -1,4 +1,7 @@
 <h1>
+修改自阿里巴巴的Otter，输出sink支持kafka，rocketMq,Elasticsearch,HBASE,Cassandra, HDFS-Arvo格式,HIVE等
+</h1>
+<h1>
 <a name="%E9%A1%B9%E7%9B%AE%E8%83%8C%E6%99%AF" class="anchor" href="#%E9%A1%B9%E7%9B%AE%E8%83%8C%E6%99%AF"><span class="octicon octicon-link"></span></a>项目背景</h1>
 <p>
    &nbsp;&nbsp;&nbsp;阿里巴巴B2B公司，因为业务的特性，卖家主要集中在国内，买家主要集中在国外，所以衍生出了杭州和美国异地机房的需求，同时为了提升用户体验，整个机房的架构为双A，两边均可写，由此诞生了otter这样一个产品。 </p>
