@@ -74,9 +74,8 @@ function changeKeyword(id, name) {
         <th>table示例说明</th>
         <td>
 			<br/>
-			单表配置: alibaba.product<br/>
-			分表配置: alibaba[1-64].product , alibaba.product[01-32]<br/>
-			正则配置: (.*).(.*)<br/>
+			mysql  单表配置: alibaba.product, 分表配置: alibaba[1-64].product , alibaba.product[01-32], 正则配置: (.*).(.*)<br/>
+			kafka  schema name :topic 名 table name: 分区id,-1 表示不指定
 		</td>
       </tr>
     </table>

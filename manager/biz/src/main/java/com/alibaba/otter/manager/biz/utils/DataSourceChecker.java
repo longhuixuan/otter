@@ -285,7 +285,7 @@ public class DataSourceChecker {
             	}
             }else if (dbMediaSource.getType().isKafka()){
             	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
-            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
+            	producer.send(new ProducerRecord<>(namespace, dbMediaSource.getName(),dbMediaSource.getUrl()));
             }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
 	            ModeValue namespaceValue = ConfigHelper.parseMode(namespace);
@@ -379,7 +379,7 @@ public class DataSourceChecker {
             	}
             }else if (dbMediaSource.getType().isKafka()){
             	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
-            	producer.send(new ProducerRecord<>("topic_test", dbMediaSource.getName(),dbMediaSource.getUrl()));
+            	producer.send(new ProducerRecord<>(namespace, dbMediaSource.getName(),dbMediaSource.getUrl()));
             	matchSchemaTables.add(name);
             }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);

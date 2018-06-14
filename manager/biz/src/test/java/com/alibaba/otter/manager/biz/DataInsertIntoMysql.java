@@ -16,7 +16,7 @@ public class DataInsertIntoMysql {
 		return sb.toString();
 	}
 
-	public static final String url = "jdbc:mysql://172.16.28.92/otter_test";
+	public static final String url = "jdbc:mysql://localhost:3306/otter-test";
 	public static final String name = "com.mysql.jdbc.Driver";
 	public static final String user = "otter";
 	public static final String password = "otter";
@@ -39,19 +39,19 @@ public class DataInsertIntoMysql {
 		// System.out.println(k);
 		int x = 0;
 		try {
-			String sql = "insert into infoagetime(prod_name,prod_id,ods_date) values(?,?,?)";
+			String sql = "insert into userinfo(uname,uphone,uaddress) values(?,?,?)";
 			// System.out.println(sql);
 			pst = conn.prepareStatement(sql);
 
-			while (x < 5000000) {
+			while (x < 500) {
 				
 				pst.setString(1, getRandomString(10));
-				pst.setInt(2, (int) (Math.random() * 100));
-				pst.setString(3, "2016-09-0" + (int) (random.nextInt(9) % 9 + 1));
+				pst.setString(2, "130"+ (Math.random() * 1000000));
+				pst.setString(3, "hangzhou-" + (int) (random.nextInt(9) % 9 + 1));
 
 				pst.addBatch();
 
-				if (x % 1000 == 0) {
+				if (x % 10 == 0) {
 					pst.executeBatch();
 					// pst.executeUpdate(arg0)
 				}

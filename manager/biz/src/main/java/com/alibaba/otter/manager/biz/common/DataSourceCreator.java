@@ -233,10 +233,6 @@ public class DataSourceCreator implements DisposableBean {
 			props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 			props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 			
-			//配置value的序列化类
-	        props.put("serializer.class", "kafka.serializer.StringEncoder");
-	        //配置key的序列化类
-	        props.put("key.serializer.class", "kafka.serializer.StringEncoder");
 //	        props.put("request.required.acks","-1");
 			kp = new KafkaProducer(props);
 			kafkaProducerMap.put(dbMediaSource.getName(), kp);
