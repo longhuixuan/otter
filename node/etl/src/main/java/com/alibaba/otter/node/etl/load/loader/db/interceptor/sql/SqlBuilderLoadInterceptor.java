@@ -48,7 +48,7 @@ public class SqlBuilderLoadInterceptor extends AbstractLoadInterceptor<DbLoadCon
         DbDialect dbDialect = dbDialectFactory.getDbDialect(context.getIdentity().getPipelineId(),source);
         //增加es等nosql处理
         if (source.getType().isCassandra() ||source.getType().isElasticSearch() ||source.getType().isHBase()
-        		||source.getType().isKafka()||source.getType().isHDFSArvo()){
+        		||source.getType().isKafka() || source.getType().isRocketMq() ||source.getType().isHDFSArvo()){
         	return false;
         }
         EventType type = currentData.getEventType();

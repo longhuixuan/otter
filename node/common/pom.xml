@@ -113,6 +113,10 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 		</dependency>
+		<dependency>
+		  <groupId>org.apache.rocketmq</groupId>
+		  <artifactId>rocketmq-client</artifactId>
+		</dependency>
 		<!-- elasticsearch -->
 		<dependency>
 			<groupId>org.elasticsearch</groupId>

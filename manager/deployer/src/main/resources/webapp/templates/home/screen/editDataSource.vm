@@ -64,7 +64,7 @@ changeform();
         <th>类型：</th>
         <td>
             <select id="sourceType" name="$dataMediaSourceGroup.type.key"  onchange="changeform();">	
-			<option value="ROECKETMQ" #if($source.type.isRocketMq()) selected="selected" #end>ROECKETMQ</option>
+			<option value="ROCKETMQ" #if($source.type.isRocketMq()) selected="selected" #end>ROCKETMQ</option>
             <option value="HIVE" #if($source.type.isHive()) selected="selected" #end>HIVE</option>
             <option value="PRESTODB" #if($source.type.isPrestoDB()) selected="selected" #end>PRESTODB</option>	
             <option value="HDFS_ARVO" #if($source.type.isHDFSArvo()) selected="selected" #end>HDFS_ARVO</option>			

@@ -27,6 +27,7 @@ import javax.sql.DataSource;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.elasticsearch.client.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,6 +140,20 @@ public class DbDialectFactory implements DisposableBean {
 											}
 											if (logger.isInfoEnabled()) {
 												logger.info(String.format("--- DATABASE: %s, SCHEMA: %s ---", "Kafka",
+														(dialect.getDefaultSchema() == null)
+																? dialect.getDefaultCatalog()
+																: dialect.getDefaultSchema()));
+											}
+											return dialect;
+										} else if (source.getType().isRocketMq()) {
+											DefaultMQProducer mqprod = (DefaultMQProducer) dbconn;
+											DbDialect dialect = dbDialectGenerator.generate(mqprod, "RocketMq", 0, 9,
+													source.getType());
+											if (dialect == null) {
+												throw new UnsupportedOperationException("no dialect for" + "RocketMq");
+											}
+											if (logger.isInfoEnabled()) {
+												logger.info(String.format("--- DATABASE: %s, SCHEMA: %s ---", "RocketMq",
 														(dialect.getDefaultSchema() == null)
 																? dialect.getDefaultCatalog()
 																: dialect.getDefaultSchema()));

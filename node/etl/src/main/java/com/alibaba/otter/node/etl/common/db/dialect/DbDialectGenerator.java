@@ -20,6 +20,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.elasticsearch.client.Client;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.lob.LobHandler;
@@ -30,6 +31,7 @@ import com.alibaba.otter.node.etl.common.db.dialect.elasticsearch.ElasticSearchD
 import com.alibaba.otter.node.etl.common.db.dialect.greenplum.GreenPlumDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.hbase.HBaseDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.kafka.KafkaDialect;
+import com.alibaba.otter.node.etl.common.db.dialect.metaq.MetaQDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.mysql.MysqlDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.oracle.OracleDialect;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
@@ -68,7 +70,10 @@ public class DbDialectGenerator {
 		} else if (dataMediaType.isKafka()) {
 			dialect = new KafkaDialect((Producer) dbconn, databaseName, databaseMajorVersion,
 					databaseMinorVersion);
-		} else if (dataMediaType.isGreenPlum()) {
+		}else if (dataMediaType.isRocketMq()) {
+			dialect = new MetaQDialect((DefaultMQProducer) dbconn, databaseName, databaseMajorVersion,
+					databaseMinorVersion);
+		}  else if (dataMediaType.isGreenPlum()) {
 			dialect = new GreenPlumDialect((JdbcTemplate) dbconn, defaultLobHandler,databaseName, databaseMajorVersion,
 					databaseMinorVersion);
 		} else {

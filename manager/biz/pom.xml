@@ -181,6 +181,10 @@
 			<groupId>org.apache.kafka</groupId>
 			<artifactId>kafka_2.11</artifactId>
 		</dependency>
+		<dependency>
+  <groupId>org.apache.rocketmq</groupId>
+  <artifactId>rocketmq-client</artifactId>
+</dependency>
 		<!-- Cassandra -->
 		<dependency>
 			<groupId>com.datastax.cassandra</groupId>

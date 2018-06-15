@@ -75,7 +75,8 @@ function changeKeyword(id, name) {
         <td>
 			<br/>
 			mysql  单表配置: alibaba.product, 分表配置: alibaba[1-64].product , alibaba.product[01-32], 正则配置: (.*).(.*)<br/>
-			kafka  schema name :topic 名 table name: 分区id,-1 表示不指定
+			kafka  schema name :topic 名 table name: 分区id,-1 表示不指定<br/>
+			rocketMq  schema name :topic 名 table name: tag名
 		</td>
       </tr>
     </table>

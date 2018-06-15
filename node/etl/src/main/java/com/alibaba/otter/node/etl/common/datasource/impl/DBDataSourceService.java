@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
@@ -152,37 +154,38 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 
 		// 构建第一层map
 		dataSources = cacheBuilder.build(new CacheLoader<Long, LoadingCache<DbMediaSource, Object>>() {
+			@Override
+			public LoadingCache<DbMediaSource, Object> load(Long pipelineId) throws Exception {
+				return CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<DbMediaSource, Object>() {
 					@Override
-					public LoadingCache<DbMediaSource, Object> load(Long pipelineId) throws Exception {
-						return CacheBuilder.newBuilder().maximumSize(1000)
-								.build(new CacheLoader<DbMediaSource, Object>() {
-									@Override
-									public Object load(DbMediaSource dbMediaSource) throws Exception {
-										// 扩展功能,可以自定义一些自己实现的 dataSource
-										if (dbMediaSource.getType().isCassandra()) {
-											return getCluster(dbMediaSource);
-										} else if (dbMediaSource.getType().isElasticSearch()) {
-											return getClient(dbMediaSource);
-										} else if (dbMediaSource.getType().isHBase()) {
-											return getHBaseConnection(dbMediaSource);
-										} else if (dbMediaSource.getType().isHDFSArvo()) {
-											return getHDFS(dbMediaSource);
-										} else if (dbMediaSource.getType().isKafka()) {
-											return getProducer(dbMediaSource);
-										} else {
-											DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
-											if (customDataSource != null) {
-												return customDataSource;
-											}
-											return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
-													dbMediaSource.getPassword(), dbMediaSource.getDriver(),
-													dbMediaSource.getType(), dbMediaSource.getEncode());
-										}
-									}
-								});
+					public Object load(DbMediaSource dbMediaSource) throws Exception {
+						// 扩展功能,可以自定义一些自己实现的 dataSource
+						if (dbMediaSource.getType().isCassandra()) {
+							return getCluster(dbMediaSource);
+						} else if (dbMediaSource.getType().isElasticSearch()) {
+							return getClient(dbMediaSource);
+						} else if (dbMediaSource.getType().isHBase()) {
+							return getHBaseConnection(dbMediaSource);
+						} else if (dbMediaSource.getType().isHDFSArvo()) {
+							return getHDFS(dbMediaSource);
+						} else if (dbMediaSource.getType().isKafka()) {
+							return getProducer(dbMediaSource);
+						} else if (dbMediaSource.getType().isRocketMq()) {
+							return getMQProducer(dbMediaSource);
+						} else {
+							DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
+							if (customDataSource != null) {
+								return customDataSource;
+							}
+							return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
+									dbMediaSource.getPassword(), dbMediaSource.getDriver(), dbMediaSource.getType(),
+									dbMediaSource.getEncode());
+						}
 					}
-
 				});
+			}
+
+		});
 
 	}
 
@@ -206,13 +209,13 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	public Cluster getCluster(DbMediaSource dbMediaSource) {
 		Assert.notNull(dbMediaSource);
 		Cluster cluster = null;
-		String[] ips=StringUtils.split(dbMediaSource.getUrl(),";");
-		Builder builder=Cluster.builder();
-		for(String ip:ips){
-			String[] ports=StringUtils.split(ip,":");
-			if (ports.length==2){
-				builder.addContactPoint(ports[0]).withPort(NumberUtils.toInt(ports[1],9042));
-			}else{
+		String[] ips = StringUtils.split(dbMediaSource.getUrl(), ";");
+		Builder builder = Cluster.builder();
+		for (String ip : ips) {
+			String[] ports = StringUtils.split(ip, ":");
+			if (ports.length == 2) {
+				builder.addContactPoint(ports[0]).withPort(NumberUtils.toInt(ports[1], 9042));
+			} else {
 				builder.addContactPoint(ip);
 			}
 		}
@@ -285,6 +288,31 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	}
 
 	/**
+	 * 获取MetaQ的生产者对象
+	 * 
+	 * @param dbMediaSource
+	 * @return
+	 */
+	public DefaultMQProducer getMQProducer(DbMediaSource dbMediaSource) {
+		Assert.notNull(dbMediaSource);
+		DefaultMQProducer producer = null;
+		String[] urls = StringUtils.split(dbMediaSource.getUrl(), "|");
+		if (urls != null && urls.length >= 2) {
+			producer = new DefaultMQProducer(urls[1]);
+			producer.setNamesrvAddr(urls[0]);
+			producer.setInstanceName(urls[1]);
+			producer.setSendMsgTimeout(3000);
+			producer.setRetryTimesWhenSendFailed(3);
+			try {
+				producer.start();
+			} catch (MQClientException e) {
+				e.printStackTrace();
+			}
+		}
+		return producer;
+	}
+
+	/**
 	 * 获取kafka的生产者对象
 	 * 
 	 * @param dataMediaSource
@@ -294,20 +322,20 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 	public Producer getProducer(DbMediaSource dbMediaSource) {
 		Assert.notNull(dbMediaSource);
 		Properties props = new Properties();
-		//props.put("bootstrap.servers", dbMediaSource.getUrl());
-//		props.put("zookeeper.connect", dbMediaSource.getUrl());
-		String[] urls=StringUtils.split(dbMediaSource.getUrl(),"|");
-		props.put("bootstrap.servers",urls[0]);
-		if (urls.length==2){
-			props.put("zookeeper.connect",urls[1]);
+		// props.put("bootstrap.servers", dbMediaSource.getUrl());
+		// props.put("zookeeper.connect", dbMediaSource.getUrl());
+		String[] urls = StringUtils.split(dbMediaSource.getUrl(), "|");
+		props.put("bootstrap.servers", urls[0]);
+		if (urls.length == 2) {
+			props.put("zookeeper.connect", urls[1]);
 		}
-		//props.put("metadata.broker.list", dbMediaSource.getUrl());
+		// props.put("metadata.broker.list", dbMediaSource.getUrl());
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("serializer.class", "kafka.serializer.StringEncoder");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("request.required.acks", "1");
 		props.put("batch.size", 128000);
-		props.put("buffer.memory",  97108864);
+		props.put("buffer.memory", 97108864);
 		props.put("compression.type", "gzip"); // 压缩
 		props.put("producer.type", "async");
 		// props.put("bootstrap.servers", dbMediaSource.getUrl());
@@ -342,7 +370,8 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 		Assert.notNull(dbMediaSource);
 		Client client = null;
 		String[] urls = StringUtils.split(dbMediaSource.getUrl(), "||");
-		if (urls.length!=3)return null;
+		if (urls.length != 3)
+			return null;
 		String[] hosts = StringUtils.split(urls[0], ";");
 		int id = 0;
 		InetSocketTransportAddress[] transportAddress = new InetSocketTransportAddress[hosts.length];
@@ -364,8 +393,8 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 			client = TransportClient.builder().addPlugin(ShieldPlugin.class).addPlugin(DeleteByQueryPlugin.class)
 					.settings(settings).build().addTransportAddresses(transportAddress);
 		} else {
-			settings = Settings.settingsBuilder().put("cluster.name", urls[1])
-					.put("client.transport.sniff", true).build();
+			settings = Settings.settingsBuilder().put("cluster.name", urls[1]).put("client.transport.sniff", true)
+					.build();
 			client = TransportClient.builder().addPlugin(DeleteByQueryPlugin.class).settings(settings).build()
 					.addTransportAddresses(transportAddress);
 		}
@@ -456,10 +485,10 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 			DataMediaType dataMediaType, String encoding) {
 		BasicDataSource dbcpDs = new BasicDataSource();
 		dbcpDs.setInitialSize(initialSize);// 初始化连接池时创建的连接数
-		if (dataMediaType.isGreenPlum()){
-			dbcpDs.setMaxActive(maxActive*2);// 连接池允许的最大并发连接数，值为非正数时表示不限制
-			dbcpDs.setMaxIdle(maxIdle*2);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
-		}else{
+		if (dataMediaType.isGreenPlum()) {
+			dbcpDs.setMaxActive(maxActive * 2);// 连接池允许的最大并发连接数，值为非正数时表示不限制
+			dbcpDs.setMaxIdle(maxIdle * 2);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
+		} else {
 			dbcpDs.setMaxActive(maxActive);// 连接池允许的最大并发连接数，值为非正数时表示不限制
 			dbcpDs.setMaxIdle(maxIdle);// 连接池中的最大空闲连接数，超过时，多余的空闲连接将会被释放，值为负数时表示不限制
 		}
@@ -603,7 +632,7 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 					logger.error("ERROR ## close the datasource has an error", e);
 				} catch (Exception e) {
 					e.printStackTrace();
-				}finally{
+				} finally {
 					sources.invalidate(source);
 				}
 			}

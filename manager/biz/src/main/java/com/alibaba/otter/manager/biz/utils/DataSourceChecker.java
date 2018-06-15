@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.common.message.Message;
 import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
 import org.elasticsearch.client.Client;
 import org.slf4j.Logger;
@@ -157,6 +159,8 @@ public class DataSourceChecker {
                 dbMediaSource.setType(DataMediaType.HDFS_ARVO);
             }else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
                 dbMediaSource.setType(DataMediaType.ELASTICSEARCH);
+            }else if (sourceType.equalsIgnoreCase("ROCKETMQ")) {
+                dbMediaSource.setType(DataMediaType.ROCKETMQ);
             }
             if (sourceType.equalsIgnoreCase("MYSQL") || sourceType.equalsIgnoreCase("greenplum") || sourceType.equalsIgnoreCase("ORACLE")){//mysql ,oracle测试
             	dataSource = dataSourceCreator.createDataSource(dbMediaSource);
@@ -207,6 +211,10 @@ public class DataSourceChecker {
                 }
             }else if (sourceType.equalsIgnoreCase("KAFKA")){
             	if (dataSourceCreator.getProducer(dbMediaSource)==null){
+            		return DATABASE_FAIL;
+            	}
+            }else if (sourceType.equalsIgnoreCase("ROCKETMQ")){
+            	if (dataSourceCreator.getMQProducer(dbMediaSource)==null){
             		return DATABASE_FAIL;
             	}
             }else if (sourceType.equalsIgnoreCase("CASSANDRA")){
@@ -286,6 +294,11 @@ public class DataSourceChecker {
             }else if (dbMediaSource.getType().isKafka()){
             	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
             	producer.send(new ProducerRecord<>(namespace, dbMediaSource.getName(),dbMediaSource.getUrl()));
+            }else if (dbMediaSource.getType().isRocketMq()){
+            	DefaultMQProducer producer=dataSourceCreator.getMQProducer(dbMediaSource);
+            	  Message msg = new Message(namespace,dbMediaSource.getName(),"mqtest-"+System.currentTimeMillis(),// key
+                          ("Hello MetaQ").getBytes());
+            	producer.send(msg);
             }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
 	            ModeValue namespaceValue = ConfigHelper.parseMode(namespace);
@@ -380,6 +393,12 @@ public class DataSourceChecker {
             }else if (dbMediaSource.getType().isKafka()){
             	Producer<String,String> producer=dataSourceCreator.getProducer(dbMediaSource);
             	producer.send(new ProducerRecord<>(namespace, dbMediaSource.getName(),dbMediaSource.getUrl()));
+            	matchSchemaTables.add(name);
+            }else if (dbMediaSource.getType().isRocketMq()){
+            	DefaultMQProducer producer=dataSourceCreator.getMQProducer(dbMediaSource);
+          	  	Message msg = new Message(namespace,dbMediaSource.getName(),"mqtest-"+System.currentTimeMillis(),// key
+                        ("Hello MetaQ").getBytes());
+          	  	producer.send(msg);
             	matchSchemaTables.add(name);
             }else{
 	            dataSource = dataSourceCreator.createDataSource(dbMediaSource);

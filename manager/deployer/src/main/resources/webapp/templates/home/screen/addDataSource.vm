@@ -28,7 +28,7 @@ function changeform(){
 		$("#dsUrl").html("url:");
 	}else if (addSourceForm.sourceType.value=='PRESTODB'){
 		$("#dsUrl").html("url:");
-	}else if (addSourceForm.sourceType.value=='ROECKETMQ'){
+	}else if (addSourceForm.sourceType.value=='ROCKETMQ'){
 		$("#dsUrl").html("url:");
 	}
 }
@@ -64,7 +64,7 @@ function changeform(){
         <th>类型：</th>
         <td>
             <select id="sourceType" name="$dataMediaSourceGroup.type.key" onchange="changeform();" >
-            <option value="ROECKETMQ">ROECKETMQ</option>
+            <option value="ROCKETMQ">ROCKETMQ</option>
             <option value="HIVE">HIVE</option>
             <option value="PRESTODB">PRESTODB</option>
             <option value="HDFS_ARVO">HDFS_ARVO</option>
@@ -95,7 +95,7 @@ function changeform(){
 		</td>
       </tr>
 	  <tr> 
-        <th id="dsUrl">zookeeper hosts：</th>
+        <th id="dsUrl">url：</th>
         <td>
 			<input id="sourceUrl" name="$dataMediaSourceGroup.url.key" value="$!dataMediaSourceGroup.url.value" type="text" class="setting_input"/>
 			<br />
@@ -135,6 +135,7 @@ function changeform(){
 			mysql例子: jdbc:mysql://10.20.144.15:3306<br/>
 			oracle例子 : jdbc:oracle:thin:@10.20.144.29:1521:OINTEST<br/>
 			kafka例子 : 172.16.28.22:9092;172.16.28.23:9092|172.16.28.22:2181;172.16.28.23:2181<br/>
+			rocketmq例子:127.0.0.1:9876|ProducerGroupName<br/>
 			HBASE例子 :/home/da/hbase-site.xml<br/>
 			ELASTICSEARCH例子 :test74:9300;test75:9300;test76:9300||clustername||indexname<br/>
 			CASSANDRA例子 :test75:2688;test76:2688<br/>

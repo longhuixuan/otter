@@ -12,7 +12,6 @@ public class KafkaDialect extends AbstraNoSQLDialect {
 	private Producer producer=null;
 	private NoSqlTemplate nosqlTemplate;
 	
-	@SuppressWarnings("rawtypes")
 	public KafkaDialect(Producer dbconn, String databaseName, int databaseMajorVersion,
 			int databaseMinorVersion) {
 		this.producer = dbconn;

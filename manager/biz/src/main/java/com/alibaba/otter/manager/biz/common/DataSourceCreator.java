@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
@@ -93,6 +95,9 @@ public class DataSourceCreator implements DisposableBean {
 	private Map<String, Configuration> configurationMap = new ConcurrentHashMap<String, Configuration>();
 	@SuppressWarnings("rawtypes")
 	private Map<String, Producer> kafkaProducerMap = new ConcurrentHashMap<String, Producer>();
+	
+	private Map<String, DefaultMQProducer> mqProducerMap = new ConcurrentHashMap<String, DefaultMQProducer>();
+
 	private Map<String, Cluster> clusterMap=new ConcurrentHashMap<String, Cluster>();
 	
 	/**
@@ -203,6 +208,36 @@ public class DataSourceCreator implements DisposableBean {
 			return fs;
 		}
 		return null;
+	}
+	/**
+	 * 获取MetaQ的生产者对象
+	 * @param dbMediaSource
+	 * @return
+	 */
+	public DefaultMQProducer  getMQProducer(DbMediaSource dbMediaSource) {
+		Assert.notNull(dbMediaSource);
+		DefaultMQProducer producer = mqProducerMap.get(dbMediaSource.getName());
+		if (producer == null) {
+			String[] urls=StringUtils.split(dbMediaSource.getUrl(),"|");
+			if (urls!=null && urls.length>=2){
+				producer = new DefaultMQProducer(urls[1]);
+			    producer.setNamesrvAddr(urls[0]);
+			    /**
+			     *默认情况下，一台服务器只能启动一个Producer或Consumer实例，所以如果需要在一台服务器启
+			     *动多个实例，需要设置实例的名称
+			     */
+			    producer.setInstanceName(urls[1]);
+			    producer.setSendMsgTimeout(3000);
+			    producer.setRetryTimesWhenSendFailed(3);
+			    try {
+					producer.start();
+					mqProducerMap.put(dbMediaSource.getName(), producer);
+				} catch (MQClientException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return producer;
 	}
 
 	/**
@@ -451,6 +486,8 @@ public class DataSourceCreator implements DisposableBean {
 	public void setDataSourceHandlers(List<DataSourceHanlder> dataSourceHandlers) {
 		this.dataSourceHandlers = dataSourceHandlers;
 	}
+	
+	
 	
 
 }

@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,25 @@ public class DataMediaSourceServiceImpl implements DataMediaSourceService {
     private static final Logger logger = LoggerFactory.getLogger(DataMediaSourceServiceImpl.class);
 
     private DataMediaSourceDAO  dataMediaSourceDao;
+
+    private String dataMediaSourceTypeStr;
+    
+    private List<String> dataMediaSourceTypes;
+    
+    public String getDataMediaSourceTypeStr() {
+		return dataMediaSourceTypeStr;
+	}
+
+	public void setDataMediaSourceTypeStr(String dataMediaSourceTypeStr) {
+		this.dataMediaSourceTypeStr = dataMediaSourceTypeStr;
+	}
+
+	public List<String> getDataMediaSourceTypes() {
+		if (dataMediaSourceTypes==null){
+			dataMediaSourceTypes=Arrays.asList(StringUtils.split(dataMediaSourceTypeStr,","));
+		}
+		return dataMediaSourceTypes;
+	}
 
     /**
      * 添加
@@ -220,7 +240,8 @@ public class DataMediaSourceServiceImpl implements DataMediaSourceService {
         try {
             if (dataMediaSourceDo.getType().isMysql() || dataMediaSourceDo.getType().isOracle()|| dataMediaSourceDo.getType().isGreenPlum()
             		||dataMediaSourceDo.getType().isElasticSearch()||dataMediaSourceDo.getType().isCassandra()
-            		||dataMediaSourceDo.getType().isHBase()||dataMediaSourceDo.getType().isHDFSArvo()||dataMediaSourceDo.getType().isKafka()) {
+            		||dataMediaSourceDo.getType().isHBase()||dataMediaSourceDo.getType().isHDFSArvo()
+            		||dataMediaSourceDo.getType().isRocketMq() ||dataMediaSourceDo.getType().isKafka()) {
                 dataMediaSource = JsonUtils.unmarshalFromString(dataMediaSourceDo.getProperties(), DbMediaSource.class);
             } else if (dataMediaSourceDo.getType().isNapoli() || dataMediaSourceDo.getType().isMq()) {
                 dataMediaSource = JsonUtils.unmarshalFromString(dataMediaSourceDo.getProperties(), MqMediaSource.class);

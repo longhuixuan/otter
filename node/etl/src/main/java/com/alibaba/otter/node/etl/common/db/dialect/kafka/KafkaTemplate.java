@@ -36,8 +36,9 @@ public class KafkaTemplate implements NoSqlTemplate {
 			event.setLoadDataTime(System.currentTimeMillis());
 			if (event.getEventType().isDdl()){
 				producer.send(new ProducerRecord(event.getSchemaName()+"_DDL",pkVal,mapper.writeValueAsString(event)),new EventCallBack(event));
+			}else{
+				producer.send(new ProducerRecord(event.getSchemaName(),pkVal,mapper.writeValueAsString(event)),new EventCallBack(event));
 			}
-			producer.send(new ProducerRecord(event.getSchemaName(),pkVal,mapper.writeValueAsString(event)),new EventCallBack(event));
 			logger.info("kafka消息发送完毕时间: event time:"+new Timestamp(event.getExecuteTime())+"  当前时间:"+new Timestamp(System.currentTimeMillis()));
 		}catch(IllegalStateException ise){
 			throw new ConnClosedException(ise.getMessage());
