@@ -155,8 +155,8 @@ public class DataSourceChecker {
                 dbMediaSource.setType(DataMediaType.CASSANDRA);
             }else if (sourceType.equalsIgnoreCase("HBASE")) {
                 dbMediaSource.setType(DataMediaType.HBASE);
-            }else if (sourceType.equalsIgnoreCase("HDFS_ARVO")) {
-                dbMediaSource.setType(DataMediaType.HDFS_ARVO);
+            }else if (sourceType.equalsIgnoreCase("HDFS")) {
+                dbMediaSource.setType(DataMediaType.HDFS);
             }else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
                 dbMediaSource.setType(DataMediaType.ELASTICSEARCH);
             }else if (sourceType.equalsIgnoreCase("ROCKETMQ")) {
@@ -286,7 +286,7 @@ public class DataSourceChecker {
             	if (!admin.tableExists(TableName.valueOf(name))) {
             		return SELECT_FAIL;
             	}
-            }else if (dbMediaSource.getType().isHDFSArvo()){
+            }else if (dbMediaSource.getType().isHDFS()){
             	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
             	if (!fs.exists(new Path(name))){
             		return SELECT_FAIL;
@@ -383,7 +383,7 @@ public class DataSourceChecker {
             	}else{
             		matchSchemaTables.add( name);
             	}
-            }else if (dbMediaSource.getType().isHDFSArvo()){
+            }else if (dbMediaSource.getType().isHDFS()){
             	FileSystem fs=dataSourceCreator.getHDFS(dbMediaSource);
             	if (!fs.exists(new Path(name))){
             		return TABLE_FAIL;

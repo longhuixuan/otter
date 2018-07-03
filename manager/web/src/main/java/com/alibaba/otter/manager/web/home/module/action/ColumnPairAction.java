@@ -74,7 +74,7 @@ public class ColumnPairAction extends AbstractAction {
         if (!(targetMedia.getSource().getType().isNapoli() || targetMedia.getSource().getType().isElasticSearch() 
         		|| targetMedia.getSource().getType().isHBase()||targetMedia.getSource().getType().isKafka() 
         		||targetMedia.getSource().getType().isRocketMq() 
-        		||targetMedia.getSource().getType().isHDFSArvo()) && sourceColumnNames.size() != targetColumnNames.size()) {
+        		||targetMedia.getSource().getType().isHDFS()) && sourceColumnNames.size() != targetColumnNames.size()) {
             err.setMessage("invalidColumnPair");
             return;
         }

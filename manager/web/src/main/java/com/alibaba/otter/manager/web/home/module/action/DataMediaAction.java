@@ -61,7 +61,7 @@ public class DataMediaAction extends AbstractAction {
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
         if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
-        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFSArvo()
+        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFS()
         		||dataMediaSource.getType().isGreenPlum()||dataMediaSource.getType().isKafka()
         		||dataMediaSource.getType().isRocketMq()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);
@@ -99,7 +99,7 @@ public class DataMediaAction extends AbstractAction {
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
         if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()||dataMediaSource.getType().isElasticSearch()
-        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFSArvo()
+        		||dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isHBase()||dataMediaSource.getType().isHDFS()
         		||dataMediaSource.getType().isKafka()||dataMediaSource.getType().isGreenPlum()
         		||dataMediaSource.getType().isRocketMq()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);

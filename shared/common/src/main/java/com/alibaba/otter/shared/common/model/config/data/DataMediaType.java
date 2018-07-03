@@ -38,7 +38,7 @@ public enum DataMediaType {
     /** CASSANDRA DB */
     CASSANDRA,
     /** HDFS-ARVO DB */
-    HDFS_ARVO,
+    HDFS,
     /** cobar */
     COBAR,
     /** tddl */
@@ -79,8 +79,8 @@ public enum DataMediaType {
     public boolean isCassandra() {
         return this.equals(DataMediaType.CASSANDRA);
     }
-    public boolean isHDFSArvo() {
-        return this.equals(DataMediaType.HDFS_ARVO);
+    public boolean isHDFS() {
+        return this.equals(DataMediaType.HDFS);
     }
 
     public boolean isOracle() {

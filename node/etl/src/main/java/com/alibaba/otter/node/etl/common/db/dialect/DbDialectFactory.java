@@ -159,7 +159,7 @@ public class DbDialectFactory implements DisposableBean {
 																: dialect.getDefaultSchema()));
 											}
 											return dialect;
-										} else if (source.getType().isHDFSArvo()) {
+										} else if (source.getType().isHDFS()) {
 											FileSystem fs = (FileSystem) dbconn;
 											DbDialect dialect = dbDialectGenerator.generate(fs, "HDFS_Arvo", 2, 1,
 													source.getType());

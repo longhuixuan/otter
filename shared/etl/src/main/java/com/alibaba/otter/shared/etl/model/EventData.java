@@ -21,11 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 import com.alibaba.otter.shared.common.model.config.channel.ChannelParameter.SyncConsistency;
 import com.alibaba.otter.shared.common.model.config.channel.ChannelParameter.SyncMode;
 import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * 每条变更数据.

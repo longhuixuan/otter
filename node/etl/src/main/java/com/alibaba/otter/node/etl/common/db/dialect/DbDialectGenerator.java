@@ -64,7 +64,7 @@ public class DbDialectGenerator {
 		} else if (dataMediaType.isHBase()) {
 			dialect = new HBaseDialect((Connection) dbconn, databaseName, databaseMajorVersion,
 					databaseMinorVersion);
-		} else if (dataMediaType.isHDFSArvo()) {
+		} else if (dataMediaType.isHDFS()) {
 			dialect = new HdfsArvoDialect((FileSystem) dbconn, databaseName, databaseMajorVersion,
 					databaseMinorVersion);
 		} else if (dataMediaType.isKafka()) {

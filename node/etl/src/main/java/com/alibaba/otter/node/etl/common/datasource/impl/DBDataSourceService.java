@@ -166,7 +166,7 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 							return getClient(dbMediaSource);
 						} else if (dbMediaSource.getType().isHBase()) {
 							return getHBaseConnection(dbMediaSource);
-						} else if (dbMediaSource.getType().isHDFSArvo()) {
+						} else if (dbMediaSource.getType().isHDFS()) {
 							return getHDFS(dbMediaSource);
 						} else if (dbMediaSource.getType().isKafka()) {
 							return getProducer(dbMediaSource);

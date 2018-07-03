@@ -240,7 +240,7 @@ public class DataMediaSourceServiceImpl implements DataMediaSourceService {
         try {
             if (dataMediaSourceDo.getType().isMysql() || dataMediaSourceDo.getType().isOracle()|| dataMediaSourceDo.getType().isGreenPlum()
             		||dataMediaSourceDo.getType().isElasticSearch()||dataMediaSourceDo.getType().isCassandra()
-            		||dataMediaSourceDo.getType().isHBase()||dataMediaSourceDo.getType().isHDFSArvo()
+            		||dataMediaSourceDo.getType().isHBase()||dataMediaSourceDo.getType().isHDFS()
             		||dataMediaSourceDo.getType().isRocketMq() ||dataMediaSourceDo.getType().isKafka()) {
                 dataMediaSource = JsonUtils.unmarshalFromString(dataMediaSourceDo.getProperties(), DbMediaSource.class);
             } else if (dataMediaSourceDo.getType().isNapoli() || dataMediaSourceDo.getType().isMq()) {

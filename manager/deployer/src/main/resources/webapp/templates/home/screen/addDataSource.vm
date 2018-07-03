@@ -16,7 +16,7 @@ function changeform(){
 		$("#dsUrl").html("hosts:");
 	}else if (addSourceForm.sourceType.value=='CASSANDRA'){
 		$("#dsUrl").html("url:");
-	}else if (addSourceForm.sourceType.value=='HDFS-ARVO'){
+	}else if (addSourceForm.sourceType.value=='HDFS'){
 		$("#dsUrl").html("hdfs-site:");
 	}else if (addSourceForm.sourceType.value=='MYSQL'){
 		$("#dsUrl").html("url:");
@@ -67,7 +67,7 @@ function changeform(){
             <option value="ROCKETMQ">ROCKETMQ</option>
             <option value="HIVE">HIVE</option>
             <option value="PRESTODB">PRESTODB</option>
-            <option value="HDFS_ARVO">HDFS_ARVO</option>
+            <option value="HDFS">HDFS</option>
             <option value="KAFKA">KAFKA</option>
             <option value="HBASE">HBASE</option>
             <option value="ELASTICSEARCH">ELASTICSEARCH</option>

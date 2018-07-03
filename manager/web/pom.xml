@@ -19,11 +19,6 @@
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>javax.servlet-api</artifactId>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
 			<groupId>com.alibaba.citrus</groupId>
 			<artifactId>citrus-webx-all</artifactId>
 		</dependency>

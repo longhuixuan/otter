@@ -57,7 +57,7 @@ public class DataMediaSourceAction extends AbstractAction {
         if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle() 
         		|| dataMediaSource.getType().isCassandra()||dataMediaSource.getType().isElasticSearch()
         		||dataMediaSource.getType().isHBase() ||dataMediaSource.getType().isGreenPlum() 
-        		|| dataMediaSource.getType().isHDFSArvo() || dataMediaSource.getType().isKafka() 
+        		|| dataMediaSource.getType().isHDFS() || dataMediaSource.getType().isKafka() 
         		|| dataMediaSource.getType().isRocketMq()) {
             DbMediaSource dbMediaSource = new DbMediaSource();
             dataMediaSourceInfo.setProperties(dbMediaSource);

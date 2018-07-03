@@ -16,7 +16,7 @@ function changeform(){
 		$("#dsUrl").html("hosts:");
 	}else if ($("#sourceType").val()=='CASSANDRA'){
 		$("#dsUrl").html("url:");
-	}else if ($("#sourceType").val()=='HDFS-ARVO'){
+	}else if ($("#sourceType").val()=='HDFS'){
 		$("#dsUrl").html("hdfs-site:");
 	}else if ($("#sourceType").val()=='MYSQL'){
 		$("#dsUrl").html("url:");
@@ -65,9 +65,7 @@ changeform();
         <td>
             <select id="sourceType" name="$dataMediaSourceGroup.type.key"  onchange="changeform();">	
 			<option value="ROCKETMQ" #if($source.type.isRocketMq()) selected="selected" #end>ROCKETMQ</option>
-            <option value="HIVE" #if($source.type.isHive()) selected="selected" #end>HIVE</option>
-            <option value="PRESTODB" #if($source.type.isPrestoDB()) selected="selected" #end>PRESTODB</option>	
-            <option value="HDFS_ARVO" #if($source.type.isHDFSArvo()) selected="selected" #end>HDFS_ARVO</option>			
+            <option value="HDFS" #if($source.type.isHDFS()) selected="selected" #end>HDFS</option>			
             	<option value="KAFKA" #if($source.type.isKafka()) selected="selected" #end>KAFKA</option>
             	<option value="HBASE" #if($source.type.isHBase()) selected="selected" #end>HBASE</option>
             	<option value="ELASTICSEARCH" #if($source.type.isElasticSearch()) selected="selected" #end>ELASTICSEARCH</option>
