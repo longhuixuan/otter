@@ -226,11 +226,7 @@
   <artifactId>rocketmq-client</artifactId>
   <version>4.2.0</version>
 </dependency>
-			<dependency>
-				<groupId>org.elasticsearch.plugin</groupId>
-				<artifactId>shield</artifactId>
-				<version>2.3.3</version>
-			</dependency>
+			
 			<dependency>
 				<groupId>org.elasticsearch.plugin</groupId>
 				<artifactId>delete-by-query</artifactId>

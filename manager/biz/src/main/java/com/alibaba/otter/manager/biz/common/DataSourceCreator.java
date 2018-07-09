@@ -50,7 +50,6 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.plugin.deletebyquery.DeleteByQueryPlugin;
-import org.elasticsearch.shield.ShieldPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -302,17 +301,17 @@ public class DataSourceCreator implements DisposableBean {
 		DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
 		Client client = esclientMap.get(dbMediaSource.getName());
 		if (client == null) {
-			String[] urls=StringUtils.split(dbMediaSource.getUrl(),"||");
+			String[] urls=StringUtils.split(dbMediaSource.getUrl(),"|");
 			if (urls.length!=3)return null;
 			String[] hosts = StringUtils.split(urls[0], ";");
 			Settings settings = null;
 			TransportClient tclinet=null;
 			if (StringUtils.isNotEmpty(dbMediaSource.getUsername())) {
-				settings = Settings.settingsBuilder().put("cluster.name", urls[1])
-						.put("shield.user", dbMediaSource.getUsername() + ":" + dbMediaSource.getPassword())
-						.put("client.transport.sniff", true).build();
-				tclinet = TransportClient.builder().addPlugin(ShieldPlugin.class).addPlugin(DeleteByQueryPlugin.class)
-						.settings(settings).build();
+//				settings = Settings.settingsBuilder().put("cluster.name", urls[1])
+//						.put("shield.user", dbMediaSource.getUsername() + ":" + dbMediaSource.getPassword())
+//						.put("client.transport.sniff", true).build();
+//				tclinet = TransportClient.builder().addPlugin(ShieldPlugin.class).addPlugin(DeleteByQueryPlugin.class)
+//						.settings(settings).build();
 			} else {
 				settings = Settings.settingsBuilder().put("cluster.name", urls[1])
 						.put("client.transport.sniff", true).build();
