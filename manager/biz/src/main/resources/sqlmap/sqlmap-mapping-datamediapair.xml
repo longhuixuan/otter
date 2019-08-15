@@ -14,6 +14,7 @@
 		<result property="pushWeight" column="PUSHWEIGHT" />
 		<result property="filter" column="FILTER" />
 		<result property="resolver" column="RESOLVER" />
+		<result property="router" column="ROUTER" />
 		<result property="pipelineId" column="PIPELINE_ID" />
 		<result property="columnPairMode" column="COLUMN_PAIR_MODE" />
 		<result property="gmtCreate" column="GMT_CREATE" />
@@ -21,7 +22,7 @@
 	</resultMap>
 
 	<!-- all dataMediaPair columns -->
-	<sql id="allDataMediaPairColumns">ID,SOURCE_DATA_MEDIA_ID,TARGET_DATA_MEDIA_ID,PULLWEIGHT,PUSHWEIGHT,FILTER,RESOLVER,PIPELINE_ID,COLUMN_PAIR_MODE,GMT_CREATE,GMT_MODIFIED</sql>
+	<sql id="allDataMediaPairColumns">ID,SOURCE_DATA_MEDIA_ID,TARGET_DATA_MEDIA_ID,PULLWEIGHT,PUSHWEIGHT,FILTER,RESOLVER,ROUTER,PIPELINE_ID,COLUMN_PAIR_MODE,GMT_CREATE,GMT_MODIFIED</sql>
 
 	<select id="findDataMediaPairById" resultMap="dataMediaPairResult" parameterClass="long">
 		select
@@ -94,6 +95,7 @@
 		PUSHWEIGHT = #pushWeight#,
 		FILTER = #filter#,
 		RESOLVER = #resolver#,
+		ROUTER = #router#,
 		PIPELINE_ID = #pipelineId#,
 		COLUMN_PAIR_MODE=#columnPairMode#,
 		GMT_MODIFIED=now()
@@ -113,8 +115,8 @@
 	
 	<insert id="insertDataMediaPair" parameterClass="dataMediaPair">
 		insert into DATA_MEDIA_PAIR
-		(SOURCE_DATA_MEDIA_ID,TARGET_DATA_MEDIA_ID,PULLWEIGHT,PUSHWEIGHT,FILTER,RESOLVER,PIPELINE_ID,COLUMN_PAIR_MODE,GMT_CREATE,GMT_MODIFIED)
-		SELECT #sourceDataMediaId#,#targetDataMediaId#,#pullWeight#,#pushWeight#,#filter#,#resolver#,#pipelineId#,#columnPairMode#,now(),now() 
+		(SOURCE_DATA_MEDIA_ID,TARGET_DATA_MEDIA_ID,PULLWEIGHT,PUSHWEIGHT,FILTER,RESOLVER,ROUTER,PIPELINE_ID,COLUMN_PAIR_MODE,GMT_CREATE,GMT_MODIFIED)
+		SELECT #sourceDataMediaId#,#targetDataMediaId#,#pullWeight#,#pushWeight#,#filter#,#resolver#,#router#,#pipelineId#,#columnPairMode#,now(),now()
 		from dual 
 		WHERE not exists (select * from DATA_MEDIA_PAIR 
 		where DATA_MEDIA_PAIR.SOURCE_DATA_MEDIA_ID = #sourceDataMediaId# 

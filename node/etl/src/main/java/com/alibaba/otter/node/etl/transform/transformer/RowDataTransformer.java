@@ -16,15 +16,6 @@
 
 package com.alibaba.otter.node.etl.transform.transformer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.ddlutils.model.Column;
-import org.apache.ddlutils.model.Table;
-import org.springframework.util.CollectionUtils;
-
 import com.alibaba.otter.node.etl.common.db.dialect.DbDialect;
 import com.alibaba.otter.node.etl.common.db.dialect.DbDialectFactory;
 import com.alibaba.otter.node.etl.common.db.utils.DdlUtils;
@@ -35,11 +26,21 @@ import com.alibaba.otter.shared.common.model.config.data.DataMedia;
 import com.alibaba.otter.shared.common.model.config.data.DataMedia.ModeValue;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaPair;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
+import com.alibaba.otter.shared.common.utils.extension.ExtensionFactory;
+import com.alibaba.otter.shared.etl.extend.tablerouter.TableRouter;
 import com.alibaba.otter.shared.etl.model.EventColumn;
 import com.alibaba.otter.shared.etl.model.EventData;
 import com.alibaba.otter.shared.etl.model.EventType;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.commons.lang.StringUtils;
+import org.apache.ddlutils.model.Column;
+import org.apache.ddlutils.model.Table;
+import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * RowData -> RowData数据的转换
@@ -50,6 +51,7 @@ import com.google.common.collect.Multimap;
 public class RowDataTransformer extends AbstractOtterTransformer<EventData, EventData> {
 
     private DbDialectFactory dbDialectFactory;
+    private ExtensionFactory extensionFactory;
 
     public EventData transform(EventData data, OtterTransformerContext context) {
         EventData result = new EventData();
@@ -146,10 +148,16 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
     private void buildName(EventData data, EventData result, DataMediaPair pair) {
         DataMedia targetDataMedia = pair.getTarget();
         DataMedia sourceDataMedia = pair.getSource();
-        String schemaName = buildName(data.getSchemaName(),
-            sourceDataMedia.getNamespaceMode(),
-            targetDataMedia.getNamespaceMode());
-        String tableName = buildName(data.getTableName(), sourceDataMedia.getNameMode(), targetDataMedia.getNameMode());
+        String schemaName = null;
+        String tableName = null;
+        if (data.getEventType().isDml() && pair.isExistRouter()) {
+            TableRouter tableRouter = extensionFactory.getExtension(TableRouter.class, pair.getRouterData());
+            schemaName = tableRouter.dbRoute(data, sourceDataMedia.getNamespaceMode(), targetDataMedia.getNamespaceMode());
+            tableName = tableRouter.tableRoute(data, sourceDataMedia.getNameMode(), targetDataMedia.getNameMode());
+        } else {
+            schemaName = buildName(data.getSchemaName(), sourceDataMedia.getNamespaceMode(), targetDataMedia.getNamespaceMode());
+            tableName = buildName(data.getTableName(), sourceDataMedia.getNameMode(), targetDataMedia.getNameMode());
+        }
         result.setSchemaName(schemaName);
         result.setTableName(tableName);
     }
@@ -380,6 +388,10 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
 
     public void setDbDialectFactory(DbDialectFactory dbDialectFactory) {
         this.dbDialectFactory = dbDialectFactory;
+    }
+
+    public void setExtensionFactory(ExtensionFactory extensionFactory) {
+        this.extensionFactory = extensionFactory;
     }
 
     /**

@@ -16,16 +16,6 @@
 
 package com.alibaba.otter.manager.biz.config.datamediapair.impl;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.alibaba.otter.shared.common.utils.Assert;
 import com.alibaba.otter.manager.biz.common.exceptions.ManagerException;
 import com.alibaba.otter.manager.biz.common.exceptions.RepeatConfigureException;
 import com.alibaba.otter.manager.biz.config.datacolumnpair.DataColumnPairGroupService;
@@ -34,12 +24,17 @@ import com.alibaba.otter.manager.biz.config.datamedia.DataMediaService;
 import com.alibaba.otter.manager.biz.config.datamediapair.DataMediaPairService;
 import com.alibaba.otter.manager.biz.config.datamediapair.dal.DataMediaPairDAO;
 import com.alibaba.otter.manager.biz.config.datamediapair.dal.dataobject.DataMediaPairDO;
-import com.alibaba.otter.shared.common.model.config.data.ColumnGroup;
-import com.alibaba.otter.shared.common.model.config.data.ColumnPair;
-import com.alibaba.otter.shared.common.model.config.data.DataMedia;
-import com.alibaba.otter.shared.common.model.config.data.DataMediaPair;
-import com.alibaba.otter.shared.common.model.config.data.ExtensionData;
+import com.alibaba.otter.shared.common.model.config.data.*;
+import com.alibaba.otter.shared.common.utils.Assert;
 import com.alibaba.otter.shared.common.utils.JsonUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author simon
@@ -305,6 +300,11 @@ public class DataMediaPairServiceImpl implements DataMediaPairService {
                 dataMediaPair.setResolverData(JsonUtils.unmarshalFromString(dataMediaPairDo.getResolver(),
                                                                             ExtensionData.class));
             }
+
+            if(StringUtils.isNotBlank(dataMediaPairDo.getRouter())){
+                dataMediaPair.setRouterData(JsonUtils.unmarshalFromString(dataMediaPairDo.getRouter(),
+                        ExtensionData.class));
+            }
             dataMediaPair.setColumnPairs(columnPairs);
             dataMediaPair.setColumnGroups(columnGroups);
             dataMediaPair.setColumnPairMode(dataMediaPairDo.getColumnPairMode());
@@ -375,6 +375,7 @@ public class DataMediaPairServiceImpl implements DataMediaPairService {
             dataMediaPairDo.setTargetDataMediaId(dataMediaPair.getTarget().getId());
             dataMediaPairDo.setFilter(JsonUtils.marshalToString(dataMediaPair.getFilterData()));
             dataMediaPairDo.setResolver(JsonUtils.marshalToString(dataMediaPair.getResolverData()));
+            dataMediaPairDo.setRouter(JsonUtils.marshalToString(dataMediaPair.getRouterData()));
             dataMediaPairDo.setPullWeight(dataMediaPair.getPullWeight());
             dataMediaPairDo.setPushWeight(dataMediaPair.getPushWeight());
             dataMediaPairDo.setColumnPairMode(dataMediaPair.getColumnPairMode());
