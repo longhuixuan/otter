@@ -301,9 +301,9 @@ public class DataMediaPairServiceImpl implements DataMediaPairService {
                                                                             ExtensionData.class));
             }
 
-            if(StringUtils.isNotBlank(dataMediaPairDo.getRouter())){
+            if (StringUtils.isNotBlank(dataMediaPairDo.getRouter())) {
                 dataMediaPair.setRouterData(JsonUtils.unmarshalFromString(dataMediaPairDo.getRouter(),
-                        ExtensionData.class));
+                                                                            ExtensionData.class));
             }
             dataMediaPair.setColumnPairs(columnPairs);
             dataMediaPair.setColumnGroups(columnGroups);
