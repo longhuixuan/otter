@@ -24,6 +24,8 @@ public enum DataMediaType {
     MYSQL,
     /** oracle DB */
     ORACLE,
+    /** elsaticsearch  */
+    ELASTICSEARCH,
     /** cobar */
     COBAR,
     /** tddl */
@@ -67,5 +69,9 @@ public enum DataMediaType {
 
     public boolean isDiamondPush() {
         return this == DataMediaType.DIAMOND_PUSH;
+    }
+
+    public boolean isElasticSearch() {
+        return this.equals(DataMediaType.ELASTICSEARCH);
     }
 }

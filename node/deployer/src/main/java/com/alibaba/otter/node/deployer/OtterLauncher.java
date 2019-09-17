@@ -16,6 +16,7 @@
 
 package com.alibaba.otter.node.deployer;
 
+import com.alibaba.otter.canal.parse.exception.CanalParseException;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ public class OtterLauncher {
     private static final Logger logger = LoggerFactory.getLogger(OtterLauncher.class);
 
     public static void main(String[] args) throws Throwable {
+        System.setProperty("nid","1");
         // 启动dragoon client
         // startDragoon();
         // logger.info("INFO ## the dragoon is start now ......");

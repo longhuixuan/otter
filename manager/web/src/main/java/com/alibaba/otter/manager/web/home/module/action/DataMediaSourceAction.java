@@ -53,8 +53,9 @@ public class DataMediaSourceAction extends AbstractAction {
                       Navigator nav) throws Exception {
         DataMediaSource dataMediaSource = new DataMediaSource();
         dataMediaSourceInfo.setProperties(dataMediaSource);
-
-        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()) {
+        if (dataMediaSource.getType().isMysql()
+                || dataMediaSource.getType().isOracle()
+                ||dataMediaSource.getType().isElasticSearch()) {
             DbMediaSource dbMediaSource = new DbMediaSource();
             dataMediaSourceInfo.setProperties(dbMediaSource);
             if (dataMediaSource.getType().isMysql()) {

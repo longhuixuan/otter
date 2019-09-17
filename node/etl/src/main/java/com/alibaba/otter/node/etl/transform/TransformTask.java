@@ -50,87 +50,24 @@ public class TransformTask extends GlobalTask {
         super(pipelineId);
     }
 
+    @Override
     public void run() {
         MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipelineId));
         while (running) {
             try {
                 final EtlEventData etlEventData = arbitrateEventService.transformEvent().await(pipelineId);
-                Runnable task = new Runnable() {
-
-                    @Override
-                    public void run() {
-                        // 设置profiling信息
-                        boolean profiling = isProfiling();
-                        Long profilingStartTime = null;
-                        if (profiling) {
-                            profilingStartTime = System.currentTimeMillis();
-                        }
-
-                        MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipelineId));
-                        String currentName = Thread.currentThread().getName();
-                        Thread.currentThread().setName(createTaskName(pipelineId, "transformWorker"));
-
-                        try {
-                            // 后续可判断同步数据是否为rowData
-                            List<PipeKey> keys = (List<PipeKey>) etlEventData.getDesc();
-                            DbBatch dbBatch = rowDataPipeDelegate.get(keys);
-
-                            // 可能拿到为null，因为内存不足或者网络异常，长时间阻塞时，导致从pipe拿数据出现异常，数据可能被上一个节点已经删除
-                            if (dbBatch == null) {
-                                processMissData(pipelineId, "transform miss data with keys:" + keys.toString());
-                                return;
-                            }
-
-                            // 根据对应的tid，转化为目标端的tid。后续可进行字段的加工处理
-                            // 暂时认为rowBatchs和fileBatchs不会有异构数据的转化
-                            Map<Class, BatchObject> dataBatchs = otterTransformerFactory.transform(dbBatch.getRowBatch());
-
-                            // 可能存在同一个Pipeline下有Mq和Db两种同步类型
-                            dbBatch.setRowBatch((RowBatch) dataBatchs.get(EventData.class));
-
-                            if (dbBatch.getFileBatch() != null) {
-                                Map<Class, BatchObject> fileBatchs = otterTransformerFactory.transform(dbBatch.getFileBatch());
-                                dbBatch.setFileBatch((FileBatch) fileBatchs.get(FileData.class));
-                            }
-                            // 传递给下一个流程
-                            List<PipeKey> nextKeys = rowDataPipeDelegate.put(dbBatch, etlEventData.getNextNid());
-                            etlEventData.setDesc(nextKeys);
-
-                            if (profiling) {
-                                Long profilingEndTime = System.currentTimeMillis();
-                                stageAggregationCollector.push(pipelineId,
-                                                               StageType.TRANSFORM,
-                                                               new AggregationItem(profilingStartTime, profilingEndTime));
-                            }
-                            // 处理完成后通知single已完成
-                            arbitrateEventService.transformEvent().single(etlEventData);
-                        } catch (Throwable e) {
-                            if (!isInterrupt(e)) {
-                                logger.error(String.format("[%s] transformWork executor is error! data:%s", pipelineId,
-                                                           etlEventData), e);
-                                sendRollbackTermin(pipelineId, e);
-                            } else {
-                                logger.info(String.format("[%s] transformWork executor is interrrupt! data:%s",
-                                                          pipelineId, etlEventData), e);
-                            }
-                        } finally {
-                            Thread.currentThread().setName(currentName);
-                            MDC.remove(OtterConstants.splitPipelineLogFileKey);
-                        }
-                    }
-                };
-
+                EtlEventExcutorTask etlEventExcutorTask =  new EtlEventExcutorTask(etlEventData);
                 // 构造pending任务，可在关闭线程时退出任务
                 SetlFuture extractFuture = new SetlFuture(StageType.TRANSFORM, etlEventData.getProcessId(),
-                                                          pendingFuture, task);
+                                                          pendingFuture, etlEventExcutorTask);
                 executorService.execute(extractFuture);
 
             } catch (Throwable e) {
                 if (isInterrupt(e)) {
-                    logger.info(String.format("[%s] transformTask is interrupted!", pipelineId), e);
+                    logger.info(String.format("[%s] 11111  transformTask is interrupted!", pipelineId), e);
                     return;
                 } else {
-                    logger.error(String.format("[%s] transformTask is error!", pipelineId), e);
+                    logger.error(String.format("[%s] 22222 transformTask is error!", pipelineId), e);
                     sendRollbackTermin(pipelineId, e);
                 }
             }
@@ -141,5 +78,77 @@ public class TransformTask extends GlobalTask {
 
     public void setOtterTransformerFactory(OtterTransformerFactory otterTransformerFactory) {
         this.otterTransformerFactory = otterTransformerFactory;
+    }
+
+
+    class EtlEventExcutorTask implements  Runnable{
+        private final  EtlEventData etlEventData;
+
+        public EtlEventExcutorTask(EtlEventData etlEventData){
+            this.etlEventData=etlEventData;
+        }
+
+        @Override
+        public void run() {
+
+            // 设置profiling信息
+            boolean profiling = isProfiling();
+            Long profilingStartTime = null;
+            if (profiling) {
+                profilingStartTime = System.currentTimeMillis();
+            }
+
+            MDC.put(OtterConstants.splitPipelineLogFileKey, String.valueOf(pipelineId));
+            String currentName = Thread.currentThread().getName();
+            Thread.currentThread().setName(createTaskName(pipelineId, "transformWorker"));
+
+            try {
+                // 后续可判断同步数据是否为rowData
+                List<PipeKey> keys = (List<PipeKey>) etlEventData.getDesc();
+                DbBatch dbBatch = rowDataPipeDelegate.get(keys);
+
+                // 可能拿到为null，因为内存不足或者网络异常，长时间阻塞时，导致从pipe拿数据出现异常，数据可能被上一个节点已经删除
+                if (dbBatch == null) {
+                    processMissData(pipelineId, "transform miss data with keys:" + keys.toString());
+                    return;
+                }
+
+                // 根据对应的tid，转化为目标端的tid。后续可进行字段的加工处理
+                // 暂时认为rowBatchs和fileBatchs不会有异构数据的转化
+                Map<Class, BatchObject> dataBatchs = otterTransformerFactory.transform(dbBatch.getRowBatch());
+
+                // 可能存在同一个Pipeline下有Mq和Db两种同步类型
+                dbBatch.setRowBatch((RowBatch) dataBatchs.get(EventData.class));
+
+                if (dbBatch.getFileBatch() != null) {
+                    Map<Class, BatchObject> fileBatchs = otterTransformerFactory.transform(dbBatch.getFileBatch());
+                    dbBatch.setFileBatch((FileBatch) fileBatchs.get(FileData.class));
+                }
+                // 传递给下一个流程
+                List<PipeKey> nextKeys = rowDataPipeDelegate.put(dbBatch, etlEventData.getNextNid());
+                etlEventData.setDesc(nextKeys);
+
+                if (profiling) {
+                    Long profilingEndTime = System.currentTimeMillis();
+                    stageAggregationCollector.push(pipelineId,
+                            StageType.TRANSFORM,
+                            new AggregationItem(profilingStartTime, profilingEndTime));
+                }
+                // 处理完成后通知single已完成
+                arbitrateEventService.transformEvent().single(etlEventData);
+            } catch (Throwable e) {
+                if (!isInterrupt(e)) {
+                    logger.error(String.format("[%s] 44444 transformWork executor is error! data:%s", pipelineId,
+                            etlEventData), e);
+                    sendRollbackTermin(pipelineId, e);
+                } else {
+                    logger.info(String.format("[%s] 55555 transformWork executor is interrrupt! data:%s",
+                            pipelineId, etlEventData), e);
+                }
+            } finally {
+                Thread.currentThread().setName(currentName);
+                MDC.remove(OtterConstants.splitPipelineLogFileKey);
+            }
+        }
     }
 }

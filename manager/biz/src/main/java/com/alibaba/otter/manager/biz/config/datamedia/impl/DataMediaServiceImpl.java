@@ -16,15 +16,18 @@
 
 package com.alibaba.otter.manager.biz.config.datamedia.impl;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 import javax.sql.DataSource;
 
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.apache.ddlutils.model.Column;
 import org.apache.ddlutils.model.Table;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,13 +52,13 @@ import com.alibaba.otter.shared.common.utils.meta.DdlUtils;
  */
 public class DataMediaServiceImpl implements DataMediaService {
 
-    private static final Logger    logger = LoggerFactory.getLogger(DataMediaServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataMediaServiceImpl.class);
 
-    private DataMediaDAO           dataMediaDao;
+    private DataMediaDAO dataMediaDao;
 
     private DataMediaSourceService dataMediaSourceService;
 
-    private DataSourceCreator      dataSourceCreator;
+    private DataSourceCreator dataSourceCreator;
 
     @Override
     public List<String> queryColumnByMediaId(Long dataMediaId) {
@@ -68,20 +71,46 @@ public class DataMediaServiceImpl implements DataMediaService {
         if (dataMedia.getSource().getType().isNapoli()) {
             return columnResult;
         }
-
-        DataSource dataSource = dataSourceCreator.createDataSource(dataMedia.getSource());
         // 针对multi表，直接获取第一个匹配的表结构
         String schemaName = dataMedia.getNamespaceMode().getSingleValue();
         String tableName = dataMedia.getNameMode().getSingleValue();
-        try {
-            Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), schemaName, schemaName, tableName);
-            for (Column column : table.getColumns()) {
-                columnResult.add(column.getName());
+        if (dataMedia.getSource().getType().isElasticSearch()) {
+            Client client = dataSourceCreator.getClient(dataMedia.getSource());
+            if (client == null) {
+                return columnResult;
             }
-        } catch (Exception e) {
-            logger.error("ERROR ## DdlUtils find table happen error!", e);
+            GetMappingsResponse mappingResp = client.admin().indices().prepareGetMappings(schemaName).setTypes(tableName).execute().actionGet();
+            String iteKey = mappingResp.getMappings().keysIt().next();
+            ImmutableOpenMap<String, MappingMetaData> mappings = mappingResp.getMappings().get(iteKey);
+            if (mappings != null) {
+                for (ObjectObjectCursor<String, MappingMetaData> typeEntry : mappings) {
+                    if (tableName.equalsIgnoreCase(typeEntry.key)) {
+                        try {
+                            Map<String, Object> fields = typeEntry.value.sourceAsMap();
+                            Map mf = (Map) fields.get("properties");
+                            Iterator iter = mf.entrySet().iterator();
+                            while (iter.hasNext()) {
+                                //字段
+                                Map.Entry<String, Map> ob = (Map.Entry<String, Map>) iter.next();
+                                columnResult.add(ob.getKey());
+                            }
+                        } catch (Exception e) {
+                            logger.error("ERROR ## ElasticSearch find table happen error!", e);
+                        }
+                    }
+                }
+            }
+        } else {
+            try {
+                DataSource dataSource = dataSourceCreator.createDataSource(dataMedia.getSource());
+                Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), schemaName, schemaName, tableName);
+                for (Column column : table.getColumns()) {
+                    columnResult.add(column.getName());
+                }
+            } catch (Exception e) {
+                logger.error("ERROR ## DdlUtils find table happen error!", e);
+            }
         }
-
         return columnResult;
     }
 
@@ -186,7 +215,7 @@ public class DataMediaServiceImpl implements DataMediaService {
             List<DataMediaDO> dataMediaDos = dataMediaDao.listByCondition(condition);
             if (dataMediaDos.isEmpty()) {
                 logger.debug("DEBUG ## couldn't query any dataMedias by the condition:"
-                             + JsonUtils.marshalToString(condition));
+                        + JsonUtils.marshalToString(condition));
                 return dataMedias;
             }
             dataMedias = doToModel(dataMediaDos);
@@ -207,7 +236,7 @@ public class DataMediaServiceImpl implements DataMediaService {
         List<DataMedia> dataMedias = listByIds(dataMediaId);
         if (dataMedias.size() != 1) {
             String exceptionCause = "query dataMediaId:" + dataMediaId + " but return " + dataMedias.size()
-                                    + " dataMedia.";
+                    + " dataMedia.";
             logger.error("ERROR ## " + exceptionCause);
             throw new ManagerException(exceptionCause);
         }
@@ -230,7 +259,7 @@ public class DataMediaServiceImpl implements DataMediaService {
                 dataMediaDos = dataMediaDao.listByMultiId(identities);
                 if (dataMediaDos.isEmpty()) {
                     String exceptionCause = "couldn't query any dataMedia by dataMediaIds:"
-                                            + Arrays.toString(identities);
+                            + Arrays.toString(identities);
                     logger.error("ERROR ## " + exceptionCause);
                     throw new ManagerException(exceptionCause);
                 }
@@ -273,7 +302,7 @@ public class DataMediaServiceImpl implements DataMediaService {
 
     /**
      * 用于Model对象转化为DO对象
-     * 
+     *
      * @param dataMedia
      * @return DataMediaDO
      */
@@ -302,7 +331,7 @@ public class DataMediaServiceImpl implements DataMediaService {
 
     /**
      * 用于DO对象转化为Model对象
-     * 
+     *
      * @param dataMediaDo
      * @return DataMedia
      */
@@ -310,7 +339,9 @@ public class DataMediaServiceImpl implements DataMediaService {
         DataMedia dataMedia = null;
         try {
             DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaDo.getDataMediaSourceId());
-            if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()) {
+            if (dataMediaSource.getType().isMysql()
+                    || dataMediaSource.getType().isOracle()
+                    || dataMediaSource.getType().isElasticSearch()) {
                 dataMedia = JsonUtils.unmarshalFromString(dataMediaDo.getProperties(), DbDataMedia.class);
                 dataMedia.setSource(dataMediaSource);
             } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {

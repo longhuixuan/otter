@@ -67,10 +67,11 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         result.setSize(data.getSize());
         result.setHint(data.getHint());
         result.setWithoutSchema(data.isWithoutSchema());
-        if (data.getEventType().isDdl()) {
+
+        if (data.getEventType().isDdl() && dataMedia.getSource().getType().isMysql()) {
             // ddl不需要处理字段
             if (StringUtils.equalsIgnoreCase(result.getSchemaName(), data.getSchemaName())
-                && StringUtils.equalsIgnoreCase(result.getTableName(), data.getTableName())) {
+                    && StringUtils.equalsIgnoreCase(result.getTableName(), data.getTableName())) {
                 // 是否需要对ddl sql进行转化，暂时不支持异构，必须保证源表和目标表的名字相同
                 result.setDdlSchemaName(data.getDdlSchemaName());
                 result.setSql(data.getSql());
@@ -78,23 +79,44 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
             } else {
                 // 动态转换ddl sql,替换库名和表名
                 String sql = DdlUtils.convert(data.getSql(),
-                    data.getSchemaName(),
-                    data.getTableName(),
-                    result.getSchemaName(),
-                    result.getTableName());
+                        data.getSchemaName(),
+                        data.getTableName(),
+                        result.getSchemaName(),
+                        result.getTableName());
                 result.setDdlSchemaName(result.getSchemaName());
                 result.setSql(sql);
                 return result;
-                // throw new TransformException("no support ddl for [" +
-                // data.getSchemaName() + "." + data.getTableName()
-                // + "] to [" + result.getSchemaName() + "." +
-                // result.getTableName()
-                // + "] , sql :" + data.getSql());
             }
         }
+//        if (data.getEventType().isDdl()) {
+//            // ddl不需要处理字段
+//            if (StringUtils.equalsIgnoreCase(result.getSchemaName(), data.getSchemaName())
+//                && StringUtils.equalsIgnoreCase(result.getTableName(), data.getTableName())) {
+//                // 是否需要对ddl sql进行转化，暂时不支持异构，必须保证源表和目标表的名字相同
+//                result.setDdlSchemaName(data.getDdlSchemaName());
+//                result.setSql(data.getSql());
+//                return result;
+//            } else {
+//                // 动态转换ddl sql,替换库名和表名
+//                String sql = DdlUtils.convert(data.getSql(),
+//                    data.getSchemaName(),
+//                    data.getTableName(),
+//                    result.getSchemaName(),
+//                    result.getTableName());
+//                result.setDdlSchemaName(result.getSchemaName());
+//                result.setSql(sql);
+//                return result;
+//                // throw new TransformException("no support ddl for [" +
+//                // data.getSchemaName() + "." + data.getTableName()
+//                // + "] to [" + result.getSchemaName() + "." +
+//                // result.getTableName()
+//                // + "] , sql :" + data.getSql());
+//            }
+//        }
 
         Multimap<String, String> translateColumnNames = HashMultimap.create();
-        if (context.getDataMediaPair().getColumnPairMode().isInclude()) { // 只针对正向匹配进行名字映射，exclude不做处理
+        // 只针对正向匹配进行名字映射，exclude不做处理
+        if (context.getDataMediaPair().getColumnPairMode().isInclude()) {
             List<ColumnPair> columnPairs = context.getDataMediaPair().getColumnPairs();
             for (ColumnPair columnPair : columnPairs) {
                 translateColumnNames.put(columnPair.getSourceColumn().getName(), columnPair.getTargetColumn().getName());
@@ -105,14 +127,23 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         boolean useTableTransform = context.getPipeline().getParameters().getUseTableTransform();
         boolean enableCompatibleMissColumn = context.getPipeline().getParameters().getEnableCompatibleMissColumn();
         TableInfoHolder tableHolder = null;
-        if (useTableTransform || enableCompatibleMissColumn) {// 控制一下是否需要反查table
-                                                              // meta信息，如果同构数据库，完全没必要反查
-            // 获取目标库的表信息
-            DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
-                (DbMediaSource) dataMedia.getSource());
+        // 控制一下是否需要反查table
+        // meta信息，如果同构数据库，完全没必要反查
+        if (useTableTransform || enableCompatibleMissColumn) {
 
-            Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
-            tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+            // 获取目标库的表信息
+            if (dataMedia.getSource().getType().isMysql()||dataMedia.getSource().getType().isOracle()){
+                DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
+                        (DbMediaSource) dataMedia.getSource());
+                Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
+                tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+            }
+//            // 获取目标库的表信息
+//            DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
+//                (DbMediaSource) dataMedia.getSource());
+//
+//            Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
+//            tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
         }
 
         // 处理column转化

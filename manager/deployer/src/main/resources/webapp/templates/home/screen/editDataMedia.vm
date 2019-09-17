@@ -76,10 +76,14 @@ function changeKeyword(id, name) {
 	  <tr> 
         <th>table示例说明</th>
         <td>
-			<br/>
-			单表配置: alibaba.product<br/>
-			分表配置: alibaba[1-64].product , alibaba.product[01-32]<br/>
-			正则配置: (.*).(.*)<br/>
+            <br/>
+            数据库:<br/>
+            单表配置: alibaba.product<br/>
+            分表配置: alibaba[1-64].product , alibaba.product[01-32]<br/>
+            正则配置: (.*).(.*)<br/>
+            es:</br/>
+            schema name：es的索引<br/>
+            table name：es的type<br/>
 		</td>
       </tr>
     </table>

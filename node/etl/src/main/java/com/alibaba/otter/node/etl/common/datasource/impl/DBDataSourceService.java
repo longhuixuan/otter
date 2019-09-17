@@ -16,15 +16,29 @@
 
 package com.alibaba.otter.node.etl.common.datasource.impl;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import javax.sql.DataSource;
 
+import com.alibaba.dubbo.rpc.cluster.Cluster;
+import com.google.common.cache.*;
+import com.oracle.jrockit.jfr.Producer;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -41,97 +55,275 @@ import com.google.common.collect.OtterMigrateMap;
 
 /**
  * Comment of DataSourceServiceImpl
- * 
+ *
  * @author xiaoqing.zhouxq
  * @author zebinxu, add {@link DataSourceHanlder}
  */
 public class DBDataSourceService implements DataSourceService, DisposableBean {
 
-    private static final Logger                       logger                        = LoggerFactory.getLogger(DBDataSourceService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DBDataSourceService.class);
 
-    private List<DataSourceHanlder>                   dataSourceHandlers;
+    private List<DataSourceHanlder> dataSourceHandlers;
 
-    private int                                       maxWait                       = 60 * 1000;
+    private int maxWait = 60 * 1000;
 
-    private int                                       minIdle                       = 0;
+    private int minIdle = 0;
 
-    private int                                       initialSize                   = 0;
+    private int initialSize = 0;
 
-    private int                                       maxActive                     = 32;
+    private int maxActive = 32;
 
-    private int                                       maxIdle                       = 32;
+    private int maxIdle = 32;
 
-    private int                                       numTestsPerEvictionRun        = -1;
+    private int numTestsPerEvictionRun = -1;
 
-    private int                                       timeBetweenEvictionRunsMillis = 60 * 1000;
+    private int timeBetweenEvictionRunsMillis = 60 * 1000;
 
-    private int                                       removeAbandonedTimeout        = 5 * 60;
+    private int removeAbandonedTimeout = 5 * 60;
 
-    private int                                       minEvictableIdleTimeMillis    = 5 * 60 * 1000;
+    private int minEvictableIdleTimeMillis = 5 * 60 * 1000;
 
     /**
      * 一个pipeline下面有一组DataSource.<br>
      * key = pipelineId<br>
      * value = key(dataMediaSourceId)-value(DataSource)<br>
      */
-    private Map<Long, Map<DbMediaSource, DataSource>> dataSources;
+    private LoadingCache<Long, LoadingCache<DbMediaSource, Object>> dataSources;
 
-    public DBDataSourceService(){
-        // 构建第一层map
-        dataSources = OtterMigrateMap.makeComputingMap(new Function<Long, Map<DbMediaSource, DataSource>>() {
-
-            public Map<DbMediaSource, DataSource> apply(final Long pipelineId) {
-                // 构建第二层map
-                return OtterMigrateMap.makeComputingMap(new Function<DbMediaSource, DataSource>() {
-
-                    public DataSource apply(DbMediaSource dbMediaSource) {
-
-                        // 扩展功能,可以自定义一些自己实现的 dataSource
-                        DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
-                        if (customDataSource != null) {
-                            return customDataSource;
+    public DBDataSourceService() {
+        // 设置soft策略
+        CacheBuilder<Long, LoadingCache<DbMediaSource, Object>> cacheBuilder = CacheBuilder.newBuilder().softValues()
+                .removalListener(new RemovalListener<Long, LoadingCache<DbMediaSource, Object>>() {
+                    @Override
+                    public void onRemoval(RemovalNotification<Long, LoadingCache<DbMediaSource, Object>> paramR) {
+                        if (dataSources == null) {
+                            return;
                         }
-
-                        return createDataSource(dbMediaSource.getUrl(),
-                            dbMediaSource.getUsername(),
-                            dbMediaSource.getPassword(),
-                            dbMediaSource.getDriver(),
-                            dbMediaSource.getType(),
-                            dbMediaSource.getEncode());
+                        for (Object dbconn : paramR.getValue().asMap().values()) {
+                            try {
+                                if (dbconn instanceof DataSource) {
+                                    DataSource source = (DataSource) dbconn;
+                                    // for filter to destroy custom datasource
+                                    if (letHandlerDestroyIfSupport(paramR.getKey(), source)) {
+                                        continue;
+                                    }
+                                    // fallback for regular destroy TODO need
+                                    // to integrate to handler
+                                    BasicDataSource basicDataSource = (BasicDataSource) source;
+                                    basicDataSource.close();
+                                } else if (dbconn instanceof Client) {
+                                    Client client = (Client) dbconn;
+                                    client.close();
+                                }
+                            } catch (Exception e) {
+                                logger.error("ERROR ## close the datasource has an error", e);
+                            }
+                        }
                     }
+                });
 
+        // 构建第一层map
+        dataSources = cacheBuilder.build(new CacheLoader<Long, LoadingCache<DbMediaSource, Object>>() {
+            @Override
+            public LoadingCache<DbMediaSource, Object> load(final Long pipelineId) throws Exception {
+                return CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<DbMediaSource, Object>() {
+                    @Override
+                    public Object load(DbMediaSource dbMediaSource) throws Exception {
+                        // 扩展功能,可以自定义一些自己实现的 dataSource
+                        if (dbMediaSource.getType().isElasticSearch()) {
+                            return getClient(dbMediaSource);
+                        } else {
+                            DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
+                            if (customDataSource != null) {
+                                return customDataSource;
+                            }
+                            return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
+                                    dbMediaSource.getPassword(), dbMediaSource.getDriver(), dbMediaSource.getType(),
+                                    dbMediaSource.getEncode());
+                        }
+                    }
                 });
             }
+
         });
 
+
+
+
+
+
+//        // 构建第一层map
+//        dataSources = OtterMigrateMap.makeComputingMap(new Function<Long, Map<DbMediaSource, DataSource>>() {
+//
+//            public Map<DbMediaSource, DataSource> apply(final Long pipelineId) {
+//                // 构建第二层map
+//                return OtterMigrateMap.makeComputingMap(new Function<DbMediaSource, DataSource>() {
+//
+//                    public DataSource apply(DbMediaSource dbMediaSource) {
+//
+//                        // 扩展功能,可以自定义一些自己实现的 dataSource
+//                        DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
+//                        if (customDataSource != null) {
+//                            return customDataSource;
+//                        }
+//
+//                        return createDataSource(dbMediaSource.getUrl(),
+//                                dbMediaSource.getUsername(),
+//                                dbMediaSource.getPassword(),
+//                                dbMediaSource.getDriver(),
+//                                dbMediaSource.getType(),
+//                                dbMediaSource.getEncode());
+//                    }
+//
+//                });
+//            }
+//        });
+
     }
 
-    public DataSource getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
+    /**
+     * 创建elasticSearch client
+     *
+     * @param dbMediaSource
+     * @return
+     */
+    public Client getClient(DbMediaSource dbMediaSource) {
+        Assert.notNull(dbMediaSource);
+        Client client = null;
+        String[] urls = StringUtils.split(dbMediaSource.getUrl(), "||");
+        if (urls.length != 3) {
+            return null;
+        }
+        String[] hosts = StringUtils.split(urls[0], ";");
+        Settings settings = Settings.builder().put("cluster.name", urls[1])
+                .put("client.transport.sniff", true).build();
+        TransportClient tclinet=new PreBuiltTransportClient(settings);
+        for (String host : hosts) {
+            String[] hp = StringUtils.split(host, ":");
+            try {
+                tclinet.addTransportAddress(new TransportAddress(InetAddress.getByName(hp[0]),
+                        NumberUtils.toInt(hp[1], 9300)));
+            } catch (UnknownHostException e) {
+                return null;
+            }
+        }
+
+        IndicesExistsResponse response = tclinet.admin().indices().prepareExists(urls[2]).execute().actionGet();
+        if (!response.isExists()) {
+            return null;
+        }
+        client=tclinet;
+        return client;
+    }
+
+
+
+
+
+    @Override
+    public Object getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
         Assert.notNull(dataMediaSource);
-        return dataSources.get(pipelineId).get(dataMediaSource);
+        DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
+        try {
+            return dataSources.get(pipelineId).get(dbMediaSource);
+        } catch (ExecutionException e) {
+            return null;
+        }
+
+
+//        Assert.notNull(dataMediaSource);
+//        return dataSources.get(pipelineId).get(dataMediaSource);
     }
 
+    @Override
     public void destroy(Long pipelineId) {
-        Map<DbMediaSource, DataSource> sources = dataSources.remove(pipelineId);
-        if (sources != null) {
-            for (DataSource source : sources.values()) {
-                try {
-                    // for filter to destroy custom datasource
-                    if (letHandlerDestroyIfSupport(pipelineId, source)) {
-                        continue;
+        try {
+            LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+            // invalidate(pipelineId);
+            if (sources != null) {
+                for (Object dbconn : sources.asMap().values()) {
+                    try {
+                        if (dbconn instanceof DataSource) {
+                            DataSource source = (DataSource) dbconn;
+                            // for filter to destroy custom datasource
+                            if (letHandlerDestroyIfSupport(pipelineId, source)) {
+                                continue;
+                            } // fallback for regular destroy TODO need to
+                            // integrate to handler
+                            BasicDataSource basicDataSource = (BasicDataSource) source;
+                            basicDataSource.close();
+                        } else if (dbconn instanceof Client) {
+                            Client client = (Client) dbconn;
+                            client.close();
+                        }
+                    } catch (SQLException e) {
+                        logger.error("ERROR ## close the datasource has an error", e);
                     }
+                }
+                sources.invalidateAll();
+                sources.cleanUp();
+            }
+        } catch (ExecutionException e1) {
+            e1.printStackTrace();
 
-                    // fallback for regular destroy
-                    // TODO need to integrate to handler
-                    BasicDataSource basicDataSource = (BasicDataSource) source;
-                    basicDataSource.close();
+        }
+
+
+
+//        Map<DbMediaSource, DataSource> sources = dataSources.remove(pipelineId);
+//        if (sources != null) {
+//            for (DataSource source : sources.values()) {
+//                try {
+//                    // for filter to destroy custom datasource
+//                    if (letHandlerDestroyIfSupport(pipelineId, source)) {
+//                        continue;
+//                    }
+//
+//                    // fallback for regular destroy
+//                    // TODO need to integrate to handler
+//                    BasicDataSource basicDataSource = (BasicDataSource) source;
+//                    basicDataSource.close();
+//                } catch (SQLException e) {
+//                    logger.error("ERROR ## close the datasource has an error", e);
+//                }
+//            }
+//
+//            sources.clear();
+//        }
+    }
+
+    @Override
+    public void destroy(Long pipelineId, DbMediaSource source) {
+        try {
+            LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+            // invalidate(pipelineId);
+            if (sources != null) {
+                Object dbconn = sources.get(source);
+                try {
+                    if (dbconn instanceof DataSource) {
+                        DataSource dsource = (DataSource) dbconn;
+                        // for filter to destroy custom datasource
+                        if (!letHandlerDestroyIfSupport(pipelineId, dsource)) {
+                            BasicDataSource basicDataSource = (BasicDataSource) dsource;
+                            basicDataSource.close();
+                        }
+                    } else if (dbconn instanceof Client) {
+                        Client client = (Client) dbconn;
+                        client.close();
+                    }
                 } catch (SQLException e) {
                     logger.error("ERROR ## close the datasource has an error", e);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    sources.invalidate(source);
                 }
             }
-
-            sources.clear();
+        } catch (ExecutionException e1) {
+            e1.printStackTrace();
         }
+
+
     }
 
     private boolean letHandlerDestroyIfSupport(Long pipelineId, DataSource dataSource) {
@@ -151,10 +343,14 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
 
     }
 
+    @Override
     public void destroy() throws Exception {
-        for (Long pipelineId : dataSources.keySet()) {
-            destroy(pipelineId);
-        }
+        dataSources.invalidateAll();
+        dataSources.cleanUp();
+
+//        for (Long pipelineId : dataSources.keySet()) {
+//            destroy(pipelineId);
+//        }
     }
 
     private DataSource createDataSource(String url, String userName, String password, String driverClassName,

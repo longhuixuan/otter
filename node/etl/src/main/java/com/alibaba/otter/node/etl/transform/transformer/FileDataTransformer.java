@@ -26,6 +26,7 @@ import com.alibaba.otter.shared.etl.model.FileData;
  */
 public class FileDataTransformer extends AbstractOtterTransformer<FileData, FileData> {
 
+    @Override
     public FileData transform(FileData data, OtterTransformerContext context) {
         // 后续可以针对文件进行目标地的fileResolver解析
         if (context.getDataMediaPair().getId().equals(data.getPairId())) {

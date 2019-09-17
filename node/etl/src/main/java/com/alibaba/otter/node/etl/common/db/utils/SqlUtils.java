@@ -27,8 +27,11 @@ import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.alibaba.otter.shared.etl.model.EventColumn;
+import com.alibaba.otter.shared.etl.model.EventData;
 import org.apache.commons.beanutils.ConvertUtilsBean;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
 
 /**
  * @author xiaoqing.zhouxq
@@ -99,6 +102,46 @@ public class SqlUtils {
         sqlTypeToJavaTypeMap.put(Types.NCLOB, String.class);
         sqlTypeToJavaTypeMap.put(Types.CLOB, String.class);
     }
+
+
+    public static String getPriKey(EventData event){
+        String pkVal = null;
+        for (EventColumn column : event.getKeys()) {
+            String cv=column.getColumnValue();
+            if ("reverse".equalsIgnoreCase(column.getPkFunctionName())){
+                //倒排
+                cv=StringUtils.reverse(cv);
+            }else if (StringUtils.startsWithIgnoreCase(column.getPkFunctionName(), "remainder:")){//求余数方式
+                String[] rms=StringUtils.split(column.getPkFunctionName(),":");
+                if (rms.length==4){
+                    cv=getRemainderRowId(NumberUtils.toLong(cv),NumberUtils.toInt(rms[1]),NumberUtils.toInt(rms[2]),NumberUtils.toInt(rms[3]));
+                }
+            }
+            if (cv!=null){
+                if (pkVal == null) {
+                    pkVal = cv;
+                } else {
+                    pkVal = pkVal + "_" + cv;
+                }
+            }
+        }
+        return pkVal;
+    }
+
+
+    /**
+     * 获取求余数方式的rowid
+     *
+     * @param fieldValue
+     * @param fieldvalueLen
+     * @param remainder
+     * @param remainderLen
+     * @return
+     */
+    public static String getRemainderRowId(Long fieldValue, Integer fieldvalueLen, Integer remainder, Integer remainderLen) {
+        return StringUtils.leftPad(String.valueOf(fieldValue % remainder), remainderLen, "0") + StringUtils.leftPad(String.valueOf(fieldValue), fieldvalueLen, "0");
+    }
+
 
     /**
      * 将指定java.sql.Types的ResultSet value转换成相应的String

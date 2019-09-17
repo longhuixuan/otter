@@ -70,6 +70,7 @@ public class DataSourceList {
             seniorDataMediaSource.setId(dataMediaSource.getId());
             seniorDataMediaSource.setName(dataMediaSource.getName());
             seniorDataMediaSource.setType(dataMediaSource.getType());
+            //TODO 支持es
             if (dataMediaSource instanceof DbMediaSource) {
                 seniorDataMediaSource.setDriver(((DbMediaSource) dataMediaSource).getDriver());
                 seniorDataMediaSource.setUrl(((DbMediaSource) dataMediaSource).getUrl());

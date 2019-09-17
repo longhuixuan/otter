@@ -22,6 +22,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
 
+
 /**
  * @author xiaoqing.zhouxq 2011-8-10 上午10:42:27
  */
@@ -56,6 +57,18 @@ public class EventColumn implements Serializable {
      * </pre>
      */
     private boolean           isUpdate         = true;
+
+
+    private String pkFunctionName="ori";//主键key生成函数
+
+    public String getPkFunctionName() {
+        return pkFunctionName;
+    }
+
+    public void setPkFunctionName(String pkFunctionName) {
+        this.pkFunctionName = pkFunctionName;
+    }
+
 
     public int getColumnType() {
         return columnType;

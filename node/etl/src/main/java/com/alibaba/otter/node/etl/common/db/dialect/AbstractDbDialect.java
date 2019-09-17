@@ -71,6 +71,7 @@ public abstract class AbstractDbDialect implements DbDialect {
         // 初始化一些数据
         jdbcTemplate.execute(new ConnectionCallback() {
 
+            @Override
             public Object doInConnection(Connection c) throws SQLException, DataAccessException {
                 DatabaseMetaData meta = c.getMetaData();
                 databaseName = meta.getDatabaseProductName();
@@ -100,6 +101,7 @@ public abstract class AbstractDbDialect implements DbDialect {
         initTables(jdbcTemplate);
     }
 
+    @Override
     public Table findTable(String schema, String table, boolean useCache) {
         List<String> key = Arrays.asList(schema, table);
         if (useCache == false) {
@@ -109,10 +111,18 @@ public abstract class AbstractDbDialect implements DbDialect {
         return tables.get(key);
     }
 
+    @Override
+    public boolean isNoSqlDB(){
+        return false;
+    }
+
+
+    @Override
     public Table findTable(String schema, String table) {
         return findTable(schema, table, true);
     }
 
+    @Override
     public void reloadTable(String schema, String table) {
         if (StringUtils.isNotEmpty(table)) {
             tables.remove(Arrays.asList(schema, table));
@@ -122,10 +132,12 @@ public abstract class AbstractDbDialect implements DbDialect {
         }
     }
 
+    @Override
     public String getName() {
         return databaseName;
     }
 
+    @Override
     public int getMajorVersion() {
         return databaseMajorVersion;
     }
@@ -135,34 +147,42 @@ public abstract class AbstractDbDialect implements DbDialect {
         return databaseMinorVersion;
     }
 
+    @Override
     public String getVersion() {
         return databaseMajorVersion + "." + databaseMinorVersion;
     }
 
+    @Override
     public LobHandler getLobHandler() {
         return lobHandler;
     }
 
+    @Override
     public JdbcTemplate getJdbcTemplate() {
         return jdbcTemplate;
     }
 
+    @Override
     public TransactionTemplate getTransactionTemplate() {
         return transactionTemplate;
     }
 
+    @Override
     public SqlTemplate getSqlTemplate() {
         return sqlTemplate;
     }
 
+    @Override
     public boolean isDRDS() {
         return false;
     }
 
+    @Override
     public String getShardColumns(String schema, String table) {
         return null;
     }
 
+    @Override
     public void destory() {
     }
 

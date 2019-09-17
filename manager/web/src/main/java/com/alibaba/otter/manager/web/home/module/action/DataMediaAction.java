@@ -38,41 +38,40 @@ import com.alibaba.otter.shared.common.model.config.data.mq.MqMediaSource;
 public class DataMediaAction extends AbstractAction {
 
     @Resource(name = "dataMediaService")
-    private DataMediaService       dataMediaService;
+    private DataMediaService dataMediaService;
 
     @Resource(name = "dataMediaPairService")
-    private DataMediaPairService   dataMediaPairService;
+    private DataMediaPairService dataMediaPairService;
 
     @Resource(name = "dataMediaSourceService")
     private DataMediaSourceService dataMediaSourceService;
 
     /**
      * 添加Channel
-     * 
+     *
      * @param channelInfo
      * @param channelParameterInfo
      * @throws Exception
      */
     public void doAdd(@FormGroup("dataMediaInfo") Group dataMediaInfo,
-                      @FormField(name = "formDataMediaError", group = "dataMediaInfo") CustomErrors err, Navigator nav)
-                                                                                                                       throws Exception {
-
+                      @FormField(name = "formDataMediaError", group = "dataMediaInfo") CustomErrors err, Navigator nav) throws Exception {
         DataMedia dataMedia = new DataMedia();
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
-        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()) {
+        if (dataMediaSource.getType().isMysql()
+                || dataMediaSource.getType().isOracle()
+                || dataMediaSource.getType().isElasticSearch()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);
-        } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
+        } else if (dataMediaSource.getType().isNapoli()
+                || dataMediaSource.getType().isMq()) {
             dataMedia.setSource((MqMediaSource) dataMediaSource);
         }
-
         try {
             dataMediaService.create(dataMedia);
         } catch (RepeatConfigureException rce) {
             err.setMessage("invalidDataMedia");
             return;
         }
-
         nav.redirectTo(WebConstant.DATA_MEDIA_LIST_LINK);
     }
 
@@ -91,11 +90,13 @@ public class DataMediaAction extends AbstractAction {
     public void doEdit(@FormGroup("dataMediaInfo") Group dataMediaInfo, @Param("pageIndex") int pageIndex,
                        @Param("searchKey") String searchKey,
                        @FormField(name = "formDataMediaError", group = "dataMediaInfo") CustomErrors err, Navigator nav)
-                                                                                                                        throws Exception {
+            throws Exception {
         DataMedia dataMedia = new DataMedia();
         dataMediaInfo.setProperties(dataMedia);
         DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaInfo.getField("sourceId").getLongValue());
-        if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()) {
+        if (dataMediaSource.getType().isMysql()
+                || dataMediaSource.getType().isOracle()
+                || dataMediaSource.getType().isElasticSearch()) {
             dataMedia.setSource((DbMediaSource) dataMediaSource);
         } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
             dataMedia.setSource((MqMediaSource) dataMediaSource);

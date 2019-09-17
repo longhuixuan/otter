@@ -29,6 +29,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 public interface DbDialect {
 
+    public boolean isNoSqlDB();
+
+
     public String getName();
 
     public String getVersion();
@@ -53,11 +56,11 @@ public interface DbDialect {
 
     public LobHandler getLobHandler();
 
-    public JdbcTemplate getJdbcTemplate();
+    public  <T> T getJdbcTemplate();
 
     public TransactionTemplate getTransactionTemplate();
 
-    public SqlTemplate getSqlTemplate();
+    public  <T> T getSqlTemplate();
 
     public Table findTable(String schema, String table);
 

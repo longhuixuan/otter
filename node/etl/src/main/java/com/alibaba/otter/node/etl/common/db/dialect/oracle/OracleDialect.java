@@ -40,14 +40,17 @@ public class OracleDialect extends AbstractDbDialect {
         sqlTemplate = new OracleSqlTemplate();
     }
 
+    @Override
     public boolean isCharSpacePadded() {
         return true;
     }
 
+    @Override
     public boolean isCharSpaceTrimmed() {
         return false;
     }
 
+    @Override
     public boolean isEmptyStringNulled() {
         return true;
     }
@@ -56,14 +59,17 @@ public class OracleDialect extends AbstractDbDialect {
         return true;
     }
 
+    @Override
     public boolean isSupportMergeSql() {
         return true;
     }
 
+    @Override
     public String getDefaultCatalog() {
         return null;
     }
 
+    @Override
     public String getDefaultSchema() {
         return (String) jdbcTemplate.queryForObject("SELECT sys_context('USERENV', 'CURRENT_SCHEMA') FROM dual",
                                                     String.class);

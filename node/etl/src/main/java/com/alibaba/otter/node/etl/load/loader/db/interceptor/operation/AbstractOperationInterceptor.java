@@ -83,17 +83,20 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
             transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);// 注意这里强制使用非事务，保证多线程的可见性
             transactionTemplate.execute(new TransactionCallback() {
 
+                @Override
                 public Object doInTransaction(TransactionStatus status) {
                     jdbcTemplate.execute(MessageFormat.format(deleteDataSql, markTableName));
                     String batchSql = MessageFormat.format(updateSql, new Object[] { markTableName, markTableColumn });
                     jdbcTemplate.batchUpdate(batchSql, new BatchPreparedStatementSetter() {
 
+                        @Override
                         public void setValues(PreparedStatement ps, int idx) throws SQLException {
                             ps.setInt(1, idx);
                             ps.setInt(2, 0);
                             // ps.setNull(3, Types.VARCHAR);
                         }
 
+                        @Override
                         public int getBatchSize() {
                             return GLOBAL_THREAD_COUNT;
                         }
@@ -109,6 +112,7 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
 
     }
 
+    @Override
     public void transactionBegin(DbLoadContext context, List<EventData> currentDatas, DbDialect dialect) {
         boolean needInfo = StringUtils.isNotEmpty(context.getPipeline().getParameters().getChannelInfo());
         if (context.getChannel().getPipelines().size() > 1 || needInfo) {// 如果是双向同步，需要记录clientId
@@ -121,6 +125,7 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
         }
     }
 
+    @Override
     public void transactionEnd(DbLoadContext context, List<EventData> currentDatas, DbDialect dialect) {
         boolean needInfo = StringUtils.isNotEmpty(context.getPipeline().getParameters().getChannelInfo());
         if (context.getChannel().getPipelines().size() > 1 || needInfo) {// 如果是双向同步，需要记录clientId
@@ -145,8 +150,8 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
         String markTableColumn = context.getPipeline().getParameters().getSystemMarkTableColumn();
         synchronized (dialect.getJdbcTemplate()) {
             if (tableCheckStatus.contains(dialect.getJdbcTemplate()) == false) {
-                init(dialect.getJdbcTemplate(), markTableName, markTableColumn);
-                tableCheckStatus.add(dialect.getJdbcTemplate());
+                init((JdbcTemplate) dialect.getJdbcTemplate(), markTableName, markTableColumn);
+                tableCheckStatus.add((JdbcTemplate) dialect.getJdbcTemplate());
             }
         }
 
@@ -158,13 +163,13 @@ public abstract class AbstractOperationInterceptor extends AbstractLoadIntercept
             if (hint != null) {
                 esql = hint + esql;
             }
-            affectedCount = dialect.getJdbcTemplate().update(esql, new Object[] { threadId, channel.getId(), info });
+            affectedCount = ((JdbcTemplate)dialect.getJdbcTemplate()).update(esql, new Object[] { threadId, channel.getId(), info });
         } else {
             String esql = MessageFormat.format(sql, new Object[] { markTableName, markTableColumn });
             if (hint != null) {
                 esql = hint + esql;
             }
-            affectedCount = dialect.getJdbcTemplate().update(esql, new Object[] { threadId, channel.getId() });
+            affectedCount = ((JdbcTemplate) dialect.getJdbcTemplate()).update(esql, new Object[] { threadId, channel.getId() });
         }
 
         if (affectedCount <= 0) {

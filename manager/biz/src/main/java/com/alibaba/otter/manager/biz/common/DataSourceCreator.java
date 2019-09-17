@@ -16,14 +16,26 @@
 
 package com.alibaba.otter.manager.biz.common;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.sql.DataSource;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -34,28 +46,32 @@ import com.alibaba.otter.common.push.datasource.DataSourceHanlder;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaType;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
+import org.springframework.util.PropertyPlaceholderHelper;
 
 public class DataSourceCreator implements DisposableBean {
 
-    private static final Logger     logger                        = LoggerFactory.getLogger(DataSourceCreator.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataSourceCreator.class);
 
-    private int                     maxWait                       = 60 * 1000;
+    private Map<String, Client> esclientMap = new ConcurrentHashMap<String, Client>();
 
-    private int                     minIdle                       = 0;
 
-    private int                     initialSize                   = 1;
+    private int maxWait = 60 * 1000;
 
-    private int                     maxActive                     = 5;
+    private int minIdle = 0;
 
-    private int                     maxIdle                       = 1;
+    private int initialSize = 1;
 
-    private int                     numTestsPerEvictionRun        = -1;
+    private int maxActive = 5;
 
-    private int                     timeBetweenEvictionRunsMillis = 60 * 1000;
+    private int maxIdle = 1;
 
-    private int                     removeAbandonedTimeout        = 10 * 60;
+    private int numTestsPerEvictionRun = -1;
 
-    private int                     minEvictableIdleTimeMillis    = 30 * 60 * 1000;
+    private int timeBetweenEvictionRunsMillis = 60 * 1000;
+
+    private int removeAbandonedTimeout = 10 * 60;
+
+    private int minEvictableIdleTimeMillis = 30 * 60 * 1000;
 
     private List<DataSourceHanlder> dataSourceHandlers;
 
@@ -73,11 +89,11 @@ public class DataSourceCreator implements DisposableBean {
         }
 
         return createDataSource(dbMediaSource.getUrl(),
-            dbMediaSource.getUsername(),
-            dbMediaSource.getPassword(),
-            dbMediaSource.getDriver(),
-            dbMediaSource.getType(),
-            dbMediaSource.getEncode());
+                dbMediaSource.getUsername(),
+                dbMediaSource.getPassword(),
+                dbMediaSource.getDriver(),
+                dbMediaSource.getType(),
+                dbMediaSource.getEncode());
     }
 
     public void destroyDataSource(DataSource dataSource) {
@@ -98,6 +114,7 @@ public class DataSourceCreator implements DisposableBean {
         }
     }
 
+    @Override
     public void destroy() throws Exception {
     }
 
@@ -189,6 +206,56 @@ public class DataSourceCreator implements DisposableBean {
         }
 
         return dbcpDs;
+    }
+
+    /**
+     * 创建elasticSearch client
+     *
+     * @param dataMediaSource
+     * @return
+     */
+    public Client getClient(DataMediaSource dataMediaSource) {
+        Assert.notNull(dataMediaSource);
+        DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
+        Client client = esclientMap.get(dbMediaSource.getName());
+        if (client == null) {
+            String[] urls=StringUtils.split(dbMediaSource.getUrl(),"|");
+            if (urls.length!=3){
+                return null;
+            }
+            String[] hosts = StringUtils.split(urls[0], ";");
+               Settings settings = Settings.builder().put("cluster.name", urls[1])
+                    .put("client.transport.sniff", true).build();
+            TransportClient tclinet=new PreBuiltTransportClient(settings);
+
+//            if (StringUtils.isNotEmpty(dbMediaSource.getUsername())) {
+//				settings = Settings.builder().put("cluster.name", urls[1])
+//						.put("shield.user", dbMediaSource.getUsername() + ":" + dbMediaSource.getPassword())
+//						.put("client.transport.sniff", true).build();
+//				tclinet = new PreBuiltTransportClient(settings);
+//            } else {
+//                settings = Settings.builder().put("cluster.name", urls[1])
+//                        .put("client.transport.sniff", true).build();
+//                tclinet=new PreBuiltTransportClient(settings);
+//            }
+            for (String host : hosts) {
+                String[] hp = StringUtils.split(host, ":");
+                try {
+                    tclinet.addTransportAddress(new TransportAddress(InetAddress.getByName(hp[0]),
+                            NumberUtils.toInt(hp[1], 9300)));
+                } catch (UnknownHostException e) {
+                    return null;
+                }
+            }
+
+            IndicesExistsResponse response = tclinet.admin().indices().prepareExists(urls[2]).execute().actionGet();
+            if (!response.isExists()) {
+                return null;
+            }
+            esclientMap.put(dbMediaSource.getName(), tclinet);
+            client=tclinet;
+        }
+        return client;
     }
 
     public void setMaxWait(int maxWait) {

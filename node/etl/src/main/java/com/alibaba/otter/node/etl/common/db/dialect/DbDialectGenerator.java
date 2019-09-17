@@ -16,7 +16,9 @@
 
 package com.alibaba.otter.node.etl.common.db.dialect;
 
+import com.alibaba.otter.node.etl.common.db.dialect.elasticsearch.ElasticSearchDialect;
 import org.apache.commons.lang.StringUtils;
+import org.elasticsearch.client.Client;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.lob.LobHandler;
 
@@ -38,36 +40,63 @@ public class DbDialectGenerator {
     protected LobHandler          defaultLobHandler;
     protected LobHandler          oracleLobHandler;
 
-    protected DbDialect generate(JdbcTemplate jdbcTemplate, String databaseName, String databaseNameVersion,
+    protected DbDialect generate(Object dbconn, String databaseName, String databaseNameVersion,
                                  int databaseMajorVersion, int databaseMinorVersion, DataMediaType dataMediaType) {
         DbDialect dialect = null;
-
-        if (StringUtils.startsWithIgnoreCase(databaseName, ORACLE)) { // for
-                                                                      // oracle
+        if (dataMediaType.isElasticSearch()) {
+            dialect = new ElasticSearchDialect((Client) dbconn, databaseName, databaseMajorVersion,
+                    databaseMinorVersion);
+        }else  if(dataMediaType.isOracle()){
+            JdbcTemplate jdbcTemplate = (JdbcTemplate) dbconn;
             dialect = new OracleDialect(jdbcTemplate,
-                oracleLobHandler,
-                databaseName,
-                databaseMajorVersion,
-                databaseMinorVersion);
-        } else if (StringUtils.startsWithIgnoreCase(databaseName, MYSQL)) { // for
-                                                                            // mysql
+                    oracleLobHandler,
+                    databaseName,
+                    databaseMajorVersion,
+                    databaseMinorVersion);
+
+        }else if(dataMediaType.isMysql()){
+            JdbcTemplate jdbcTemplate = (JdbcTemplate) dbconn;
             dialect = new MysqlDialect(jdbcTemplate,
-                defaultLobHandler,
-                databaseName,
-                databaseNameVersion,
-                databaseMajorVersion,
-                databaseMinorVersion);
-        } else if (StringUtils.startsWithIgnoreCase(databaseName, TDDL_GROUP)) { // for
-                                                                                 // tddl
-                                                                                 // group
-            throw new RuntimeException(databaseName + " type is not support!");
-        } else if (StringUtils.startsWithIgnoreCase(databaseName, TDDL_CLIENT)) {
-            throw new RuntimeException(databaseName + " type is not support!");
-        }
+                    defaultLobHandler,
+                    databaseName,
+                    databaseNameVersion,
+                    databaseMajorVersion,
+                    databaseMinorVersion);
 
-        // diamond is delegated to mysql/oracle, so don't need to extend here
-
+        }else{
+            throw new RuntimeException(databaseName + " type is not support!");
+       }
         return dialect;
+
+
+
+
+//        if (StringUtils.startsWithIgnoreCase(databaseName, ORACLE)) { // for
+//                                                                      // oracle
+//            dialect = new OracleDialect(jdbcTemplate,
+//                oracleLobHandler,
+//                databaseName,
+//                databaseMajorVersion,
+//                databaseMinorVersion);
+//        } else if (StringUtils.startsWithIgnoreCase(databaseName, MYSQL)) { // for
+//                                                                            // mysql
+//            dialect = new MysqlDialect(jdbcTemplate,
+//                defaultLobHandler,
+//                databaseName,
+//                databaseNameVersion,
+//                databaseMajorVersion,
+//                databaseMinorVersion);
+//        } else if (StringUtils.startsWithIgnoreCase(databaseName, TDDL_GROUP)) { // for
+//                                                                                 // tddl
+//                                                                                 // group
+//            throw new RuntimeException(databaseName + " type is not support!");
+//        } else if (StringUtils.startsWithIgnoreCase(databaseName, TDDL_CLIENT)) {
+//            throw new RuntimeException(databaseName + " type is not support!");
+//        }
+//
+//        // diamond is delegated to mysql/oracle, so don't need to extend here
+//
+//        return dialect;
     }
 
     // ======== setter =========

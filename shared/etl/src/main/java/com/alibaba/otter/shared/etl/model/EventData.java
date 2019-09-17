@@ -116,6 +116,9 @@ public class EventData implements ObjectData, Serializable {
      */
     private boolean           withoutSchema    = false;
 
+
+    private String exeResult;
+
     public long getTableId() {
         return tableId;
     }
@@ -250,6 +253,14 @@ public class EventData implements ObjectData, Serializable {
 
     public void setWithoutSchema(boolean withoutSchema) {
         this.withoutSchema = withoutSchema;
+    }
+
+    public String getExeResult() {
+        return exeResult;
+    }
+
+    public void setExeResult(String exeResult) {
+        this.exeResult = exeResult;
     }
 
     // ======================== helper method =================

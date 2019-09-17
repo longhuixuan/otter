@@ -17,6 +17,7 @@
 package com.alibaba.otter.node.etl.common.datasource;
 
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
+import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 
 /**
  * 抽象所有的data source处理service,并且返回DataMedia的meta信息
@@ -29,7 +30,7 @@ public interface DataSourceService {
      * 返回操作数据源的句柄
      * 
      * @param <T>
-     * @param dataMediaId
+     * @param dataMediaSource
      * @return
      */
     <T> T getDataSource(long pipelineId, DataMediaSource dataMediaSource);
@@ -37,8 +38,11 @@ public interface DataSourceService {
     /**
      * 释放当前pipeline的数据源.
      * 
-     * @param pipeline
+     * @param pipelineId
      */
     void destroy(Long pipelineId);
+
+
+    void destroy(Long pipelineId, DbMediaSource source);
 
 }

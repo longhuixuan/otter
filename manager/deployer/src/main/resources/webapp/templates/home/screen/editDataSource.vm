@@ -33,7 +33,7 @@ $control.setTemplate("home:navigation.vm")
       <tr> 
         <th width="300">数据源名字：</th>
         <td width="329">
-			<input name="$dataMediaSourceGroup.name.key" type="text" value="$source.name" class="setting_input"/><span class="red">*</span>
+			<input name="$dataMediaSourceGroup.name.key" id="sourceName"  type="text" value="$source.name" class="setting_input"/><span class="red">*</span>
 			<br />
 			<span class="red">#editDataSourceMessage ($dataMediaSourceGroup.name)</span>
 		</td>
@@ -45,6 +45,7 @@ $control.setTemplate("home:navigation.vm")
             <select id="sourceType" name="$dataMediaSourceGroup.type.key">			
 				<option value="MYSQL" #if($source.type.isMysql()) selected="selected" #end>MySQL</option>
 				<option value="ORACLE" #if($source.type.isOracle()) selected="selected" #end>Oracle</option>
+                <option value="ELASTICSEARCH" #if($source.type.isElasticSearch()) selected="selected" #end>Elasticsearch</option>
 			</select><span class="red">*</span>
         </td>
 	  </tr>
@@ -104,7 +105,8 @@ $control.setTemplate("home:navigation.vm")
         <td>
 			mysql例子: jdbc:mysql://10.20.144.15:3306<br/>
 			oracle例子 : jdbc:oracle:thin:@10.20.144.29:1521:OINTEST<br/>
-			media例子 : jdbc:mysql://groupKey=key (更改 key)
+			media例子 : jdbc:mysql://groupKey=key (更改 key)<br/>
+            ELASTICSEARCH例子 :test74:9300;test75:9300;test76:9300|clustername|indexname
 		</td> 
       </tr>
       

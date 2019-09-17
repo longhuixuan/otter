@@ -78,30 +78,37 @@ public class MysqlDialect extends AbstractDbDialect {
         });
     }
 
+    @Override
     public boolean isCharSpacePadded() {
         return false;
     }
 
+    @Override
     public boolean isCharSpaceTrimmed() {
         return true;
     }
 
+    @Override
     public boolean isEmptyStringNulled() {
         return false;
     }
 
+    @Override
     public boolean isSupportMergeSql() {
         return true;
     }
 
+    @Override
     public String getDefaultSchema() {
         return null;
     }
 
+    @Override
     public boolean isDRDS() {
         return isDRDS;
     }
 
+    @Override
     public String getShardColumns(String schema, String table) {
         if (isDRDS()) {
             return shardColumns.get(Arrays.asList(schema, table));
@@ -110,6 +117,7 @@ public class MysqlDialect extends AbstractDbDialect {
         }
     }
 
+    @Override
     public String getDefaultCatalog() {
         return (String) jdbcTemplate.queryForObject("select database()", String.class);
     }

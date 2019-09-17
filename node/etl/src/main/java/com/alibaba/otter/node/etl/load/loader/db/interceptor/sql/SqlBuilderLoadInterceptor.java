@@ -41,11 +41,19 @@ public class SqlBuilderLoadInterceptor extends AbstractLoadInterceptor<DbLoadCon
 
     private DbDialectFactory dbDialectFactory;
 
+    @Override
     public boolean before(DbLoadContext context, EventData currentData) {
         // 初步构建sql
+        DbMediaSource source=(DbMediaSource) context.getDataMediaSource();
         DbDialect dbDialect = dbDialectFactory.getDbDialect(context.getIdentity().getPipelineId(),
             (DbMediaSource) context.getDataMediaSource());
-        SqlTemplate sqlTemplate = dbDialect.getSqlTemplate();
+
+        //增加es等nosql处理
+        if (source.getType().isElasticSearch()){
+            return false;
+        }
+        SqlTemplate sqlTemplate = dbDialect.getSqlTemplate();;
+
         EventType type = currentData.getEventType();
         String sql = null;
 

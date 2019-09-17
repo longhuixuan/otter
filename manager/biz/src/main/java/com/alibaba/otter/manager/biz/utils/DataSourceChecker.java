@@ -28,6 +28,8 @@ import javax.sql.DataSource;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.ddlutils.model.Table;
+import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
+import org.elasticsearch.client.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,9 +51,9 @@ import com.alibaba.otter.shared.common.utils.meta.DdlUtils;
  */
 public class DataSourceChecker {
 
-    private static final Logger    logger             = LoggerFactory.getLogger(DataSourceChecker.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataSourceChecker.class);
     private DataMediaSourceService dataMediaSourceService;
-    private DataSourceCreator      dataSourceCreator;
+    private DataSourceCreator dataSourceCreator;
 
     // private static final String MYSQL_FLAG = "mysql";
 
@@ -61,19 +63,19 @@ public class DataSourceChecker {
     // private static final String DBTYPE_CONFLICT =
     // "\u9009\u62e9\u7684\u6570\u636e\u5e93\u7c7b\u578b\u548cjdbc-url\u4e0d\u5339\u914d";
     // 恭喜,数据库通过验证!
-    private static final String    DATABASE_SUCCESS   = "\u606d\u559c,\u6570\u636e\u5e93\u901a\u8fc7\u9a8c\u8bc1!";
+    private static final String DATABASE_SUCCESS = "\u606d\u559c,\u6570\u636e\u5e93\u901a\u8fc7\u9a8c\u8bc1!";
     // 抱歉,数据库未通过验证,请检查相关配置!
-    private static final String    DATABASE_FAIL      = "\u62b1\u6b49,\u6570\u636e\u5e93\u672a\u901a\u8fc7\u9a8c\u8bc1,\u8bf7\u68c0\u67e5\u76f8\u5173\u914d\u7f6e!";
+    private static final String DATABASE_FAIL = "\u62b1\u6b49,\u6570\u636e\u5e93\u672a\u901a\u8fc7\u9a8c\u8bc1,\u8bf7\u68c0\u67e5\u76f8\u5173\u914d\u7f6e!";
     // 恭喜,select操作成功,权限正常!
-    private static final String    TABLE_SUCCESS      = "\u606d\u559c,select\u64cd\u4f5c\u6210\u529f,\u6743\u9650\u6b63\u5e38!";
+    private static final String TABLE_SUCCESS = "\u606d\u559c,select\u64cd\u4f5c\u6210\u529f,\u6743\u9650\u6b63\u5e38!";
     // 抱歉select操作报错,请检查权限配置!
-    private static final String    TABLE_FAIL         = "\u62b1\u6b49,\u64cd\u4f5c\u62a5\u9519,\u8bf7\u68c0\u67e5\u6743\u9650\u914d\u7f6e!";
+    private static final String TABLE_FAIL = "\u62b1\u6b49,\u64cd\u4f5c\u62a5\u9519,\u8bf7\u68c0\u67e5\u6743\u9650\u914d\u7f6e!";
     // 恭喜,编码验证正确!
-    private static final String    ENCODE_QUERY_ERROR = "\u6267\u884cSQL\u51fa\u9519,\u8bf7\u68c0\u67e5\u6570\u636e\u5e93\u7c7b\u578b\u662f\u5426\u9009\u62e9\u6b63\u786e!";
+    private static final String ENCODE_QUERY_ERROR = "\u6267\u884cSQL\u51fa\u9519,\u8bf7\u68c0\u67e5\u6570\u636e\u5e93\u7c7b\u578b\u662f\u5426\u9009\u62e9\u6b63\u786e!";
     // 抱歉,字符集不匹配,实际数据库默认字符集为:
-    private static final String    ENCODE_FAIL        = "\u62b1\u6b49,\u5b57\u7b26\u96c6\u4e0d\u5339\u914d,\u5b9e\u9645\u6570\u636e\u5e93\u9ed8\u8ba4\u5b57\u7b26\u96c6\u4e3a:";
+    private static final String ENCODE_FAIL = "\u62b1\u6b49,\u5b57\u7b26\u96c6\u4e0d\u5339\u914d,\u5b9e\u9645\u6570\u636e\u5e93\u9ed8\u8ba4\u5b57\u7b26\u96c6\u4e3a:";
     // SELECT未成功
-    private static final String    SELECT_FAIL        = "SELECT\u672a\u6210\u529f";
+    private static final String SELECT_FAIL = "SELECT\u672a\u6210\u529f";
 
     // DELETE未成功
     // private static final String DELETE_FAIL = "DELETE\u672a\u6210\u529f";
@@ -110,40 +112,26 @@ public class DataSourceChecker {
     }
 
     @SuppressWarnings("resource")
-    public String check(String url, String username, String password, String encode, String sourceType) {
-        Connection conn = null;
-        Statement stmt = null;
-        ResultSet rs = null;
-        // boolean typeConflict = true;
-        // if ((sourceType.toLowerCase().equals(MYSQL_FLAG) &&
-        // url.toLowerCase().contains(MYSQL_FLAG))
-        // || sourceType.toLowerCase().equals(ORACLE_FLAG) &&
-        // url.toLowerCase().contains(ORACLE_FLAG)) {
-        // typeConflict = false;
-        // }
-        //
-        // if (typeConflict) {
-        // return DBTYPE_CONFLICT;
-        // }
+    public String check(String name, String url, String username, String password, String encode, String sourceType) {
+        DbMediaSource dbMediaSource = new DbMediaSource();
+        dbMediaSource.setUrl(url);
+        dbMediaSource.setUsername(username);
+        dbMediaSource.setPassword(password);
+        dbMediaSource.setEncode(encode);
+        dbMediaSource.setName(name);
+        if (sourceType.equalsIgnoreCase("MYSQL")) {
+            dbMediaSource.setType(DataMediaType.MYSQL);
+            dbMediaSource.setDriver("com.mysql.jdbc.Driver");
+        } else if (sourceType.equalsIgnoreCase("ORACLE")) {
+            dbMediaSource.setType(DataMediaType.ORACLE);
+            dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
+        } else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
+            dbMediaSource.setType(DataMediaType.ELASTICSEARCH);
+        }
 
-        DataSource dataSource = null;
-        try {
-
-            DbMediaSource dbMediaSource = new DbMediaSource();
-            dbMediaSource.setUrl(url);
-            dbMediaSource.setUsername(username);
-            dbMediaSource.setPassword(password);
-            dbMediaSource.setEncode(encode);
-
-            if (sourceType.equalsIgnoreCase("MYSQL")) {
-                dbMediaSource.setType(DataMediaType.MYSQL);
-                dbMediaSource.setDriver("com.mysql.jdbc.Driver");
-            } else if (sourceType.equalsIgnoreCase("ORACLE")) {
-                dbMediaSource.setType(DataMediaType.ORACLE);
-                dbMediaSource.setDriver("oracle.jdbc.driver.OracleDriver");
-            }
-
-            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
+        if (sourceType.equalsIgnoreCase("MYSQL") || sourceType.equalsIgnoreCase("ORACLE")) {
+            Connection conn = null;
+            DataSource dataSource = dataSourceCreator.createDataSource(dbMediaSource);
             try {
                 conn = dataSource.getConnection();
             } catch (Exception e) {
@@ -153,121 +141,97 @@ public class DataSourceChecker {
             if (null == conn) {
                 return DATABASE_FAIL;
             }
-
-            stmt = conn.createStatement();
-            String sql = null;
-            if (sourceType.equals("MYSQL")) {
-                sql = "SHOW VARIABLES LIKE 'character_set_database'";
-            } else if (sourceType.equals("ORACLE")) {
-                // sql
-                // ="select * from V$NLS_PARAMETERS where parameter in('NLS_LANGUAGE','NLS_TERRITORY','NLS_CHARACTERSET')";
-                sql = "select * from V$NLS_PARAMETERS where parameter in('NLS_CHARACTERSET')";
-            }
-            rs = stmt.executeQuery(sql);
-            while (rs.next()) {
-                String defaultEncode = null;
+            try {
+                Statement stmt = conn.createStatement();
+                String sql = null;
                 if (sourceType.equals("MYSQL")) {
-                    defaultEncode = ((String) rs.getObject(2)).toLowerCase();
-                    defaultEncode = defaultEncode.equals("iso-8859-1") ? "latin1" : defaultEncode;
-                    if (!encode.toLowerCase().equals(defaultEncode)) {
-                        return ENCODE_FAIL + defaultEncode;
-                    }
+                    sql = "SHOW VARIABLES LIKE 'character_set_database'";
                 } else if (sourceType.equals("ORACLE")) {
-                    // ORACLE查询服务器默认字符集需要管理员权限
-                    defaultEncode = ((String) rs.getObject(2)).toLowerCase();
-                    defaultEncode = defaultEncode.equalsIgnoreCase("zhs16gbk") ? "gbk" : defaultEncode;
-                    defaultEncode = defaultEncode.equalsIgnoreCase("us7ascii") ? "iso-8859-1" : defaultEncode;
-                    if (!encode.toLowerCase().equals(defaultEncode)) {
-                        return ENCODE_FAIL + defaultEncode;
-                    }
+                    // sql
+                    // ="select * from V$NLS_PARAMETERS where parameter in('NLS_LANGUAGE','NLS_TERRITORY','NLS_CHARACTERSET')";
+                    sql = "select * from V$NLS_PARAMETERS where parameter in('NLS_CHARACTERSET')";
                 }
+                ResultSet rs = stmt.executeQuery(sql);
 
+                while (rs.next()) {
+                    String defaultEncode = null;
+                    if (sourceType.equals("MYSQL")) {
+                        defaultEncode = ((String) rs.getObject(2)).toLowerCase();
+                        defaultEncode = defaultEncode.equals("iso-8859-1") ? "latin1" : defaultEncode;
+                        if (!encode.toLowerCase().equals(defaultEncode)) {
+                            return ENCODE_FAIL + defaultEncode;
+                        }
+                    } else if (sourceType.equals("ORACLE")) {
+                        // ORACLE查询服务器默认字符集需要管理员权限
+                        defaultEncode = ((String) rs.getObject(2)).toLowerCase();
+                        defaultEncode = defaultEncode.equalsIgnoreCase("zhs16gbk") ? "gbk" : defaultEncode;
+                        defaultEncode = defaultEncode.equalsIgnoreCase("us7ascii") ? "iso-8859-1" : defaultEncode;
+                        if (!encode.toLowerCase().equals(defaultEncode)) {
+                            return ENCODE_FAIL + defaultEncode;
+                        }
+                    }
+
+                }
+            } catch (SQLException se) {
+                logger.error("check error!", se);
+                return ENCODE_QUERY_ERROR;
+            } catch (Exception e) {
+                logger.error("check error!", e);
+                return DATABASE_FAIL;
+            } finally {
+                closeConnection(conn);
+                dataSourceCreator.destroyDataSource(dataSource);
             }
+            return DATABASE_SUCCESS;
 
-        } catch (SQLException se) {
-            logger.error("check error!", se);
-            return ENCODE_QUERY_ERROR;
-        } catch (Exception e) {
-            logger.error("check error!", e);
-            return DATABASE_FAIL;
-        } finally {
-            closeConnection(conn);
-            dataSourceCreator.destroyDataSource(dataSource);
+        } else if (sourceType.equalsIgnoreCase("ELASTICSEARCH")) {
+            if (dataSourceCreator.getClient(dbMediaSource) == null) {
+                return DATABASE_FAIL;
+            }
+            return DATABASE_SUCCESS;
         }
-
-        return DATABASE_SUCCESS;
-
+        logger.error("do not support type" + sourceType + "!");
+        return DATABASE_FAIL;
     }
+
 
     public String checkMap(String namespace, String name, Long dataSourceId) {
         Connection conn = null;
         Statement stmt = null;
         DataMediaSource source = dataMediaSourceService.findById(dataSourceId);
-        DataSource dataSource = null;
-        try {
-            DbMediaSource dbMediaSource = (DbMediaSource) source;
-            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
-            // conn = dataSource.getConnection();
-            // if (null == conn) {
-            // return DATABASE_FAIL;
-            // }
-            ModeValue namespaceValue = ConfigHelper.parseMode(namespace);
-            ModeValue nameValue = ConfigHelper.parseMode(name);
-            String tempNamespace = namespaceValue.getSingleValue();
-            String tempName = nameValue.getSingleValue();
-
-            // String descSql = "desc " + tempNamespace + "." + tempName;
-            // stmt = conn.createStatement();
-
-            try {
-                Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), tempNamespace, tempNamespace, tempName);
-                if (table == null) {
-                    return SELECT_FAIL;
-                }
-            } catch (SQLException se) {
-                logger.error("check error!", se);
-                return SELECT_FAIL;
-            } catch (Exception e) {
-                logger.error("check error!", e);
+        DbMediaSource dbMediaSource = (DbMediaSource) source;
+        if (dbMediaSource.getType().isElasticSearch()) {
+            Client client = dataSourceCreator.getClient(source);
+            String[] urls = StringUtils.split(dbMediaSource.getUrl(), "||");
+            TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(urls[2]).setTypes(name).execute().actionGet();
+            if (!typeResp.isExists()) {
                 return SELECT_FAIL;
             }
-
-            // String selectSql = "SELECT * from " + tempNamespace + "." +
-            // tempName + " where 1 = 0";
-            // String insertSql = "INSERT INTO " + tempNamespace + "." +
-            // tempName + " select * from ";
-            // insertSql += "( SELECT * from " + tempNamespace + "." + tempName
-            // + ") table2 where 1 = 0";
-            // String deleteSql = "DELETE from " + tempNamespace + "." +
-            // tempName + " where 1 = 0";
-            //
-            // stmt = conn.createStatement();
-            //
-            // try {
-            // stmt.executeQuery(selectSql);
-            // } catch (SQLException se) {
-            // return SELECT_FAIL;
-            // }
-            //
-            // try {
-            // stmt.execute(insertSql);
-            // } catch (SQLException se) {
-            // return INSERT_FAIL;
-            // }
-            //
-            // try {
-            // stmt.execute(deleteSql);
-            // } catch (SQLException se) {
-            // return DELETE_FAIL;
-            // }
-
-        } finally {
-            closeConnection(conn, stmt);
-            dataSourceCreator.destroyDataSource(dataSource);
+        } else {
+            DataSource dataSource = dataSourceCreator.createDataSource(dbMediaSource);
+            try {
+                ModeValue namespaceValue = ConfigHelper.parseMode(namespace);
+                ModeValue nameValue = ConfigHelper.parseMode(name);
+                String tempNamespace = namespaceValue.getSingleValue();
+                String tempName = nameValue.getSingleValue();
+                try {
+                    Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), tempNamespace, tempNamespace, tempName);
+                    if (table == null) {
+                        return SELECT_FAIL;
+                    }
+                } catch (SQLException se) {
+                    logger.error("check error!", se);
+                    return SELECT_FAIL;
+                } catch (Exception e) {
+                    logger.error("check error!", e);
+                    return SELECT_FAIL;
+                }
+            } finally {
+                closeConnection(conn, stmt);
+                dataSourceCreator.destroyDataSource(dataSource);
+            }
         }
-
         return TABLE_SUCCESS;
-
     }
 
     public String checkNamespaceTables(final String namespace, final String name, final Long dataSourceId) {
@@ -275,46 +239,55 @@ public class DataSourceChecker {
         try {
             DataMediaSource source = dataMediaSourceService.findById(dataSourceId);
             DbMediaSource dbMediaSource = (DbMediaSource) source;
-            dataSource = dataSourceCreator.createDataSource(dbMediaSource);
-            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-
-            List<String> schemaList;
-            {
-                ModeValue mode = ConfigHelper.parseMode(namespace);
-                String schemaPattern = ConfigHelper.makeSQLPattern(mode, namespace);
-                final ModeValueFilter modeValueFilter = ConfigHelper.makeModeValueFilter(mode, namespace);
-                if (source.getType().isOracle()) {
-                    schemaList = Arrays.asList(namespace);
-                } else {
-                    schemaList = DdlUtils.findSchemas(jdbcTemplate, schemaPattern, new DdlSchemaFilter() {
-
-                        @Override
-                        public boolean accept(String schemaName) {
-                            return modeValueFilter.accept(schemaName);
-                        }
-                    });
-                }
-            }
-
             final List<String> matchSchemaTables = new ArrayList<String>();
             matchSchemaTables.add("Find schema and tables:");
-            if (schemaList != null) {
-                ModeValue mode = ConfigHelper.parseMode(name);
-                String tableNamePattern = ConfigHelper.makeSQLPattern(mode, name);
-                final ModeValueFilter modeValueFilter = ConfigHelper.makeModeValueFilter(mode, name);
-                for (String schema : schemaList) {
-                    DdlUtils.findTables(jdbcTemplate, schema, schema, tableNamePattern, null, new DdlTableNameFilter() {
+            if (dbMediaSource.getType().isElasticSearch()){
+                Client client=dataSourceCreator.getClient(source);
+                TypesExistsResponse typeResp = client.admin().indices().prepareTypesExists(namespace).setTypes(name).execute().actionGet();
+                if (!typeResp.isExists()){
+                    return TABLE_FAIL;
+                }else{
+                    matchSchemaTables.add(namespace + "." + name);
+                }
+            }else{
+                dataSource = dataSourceCreator.createDataSource(dbMediaSource);
+                JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+                List<String> schemaList;
+                {
+                    ModeValue mode = ConfigHelper.parseMode(namespace);
+                    String schemaPattern = ConfigHelper.makeSQLPattern(mode, namespace);
+                    final ModeValueFilter modeValueFilter = ConfigHelper.makeModeValueFilter(mode, namespace);
+                    if (source.getType().isOracle()) {
+                        schemaList = Arrays.asList(namespace);
+                    } else {
+                        schemaList = DdlUtils.findSchemas(jdbcTemplate, schemaPattern, new DdlSchemaFilter() {
 
-                        @Override
-                        public boolean accept(String catalogName, String schemaName, String tableName) {
-                            if (modeValueFilter.accept(tableName)) {
-                                matchSchemaTables.add(schemaName + "." + tableName);
+                            @Override
+                            public boolean accept(String schemaName) {
+                                return modeValueFilter.accept(schemaName);
                             }
-                            return false;
-                        }
-                    });
+                        });
+                    }
+                }
+                if (schemaList != null) {
+                    ModeValue mode = ConfigHelper.parseMode(name);
+                    String tableNamePattern = ConfigHelper.makeSQLPattern(mode, name);
+                    final ModeValueFilter modeValueFilter = ConfigHelper.makeModeValueFilter(mode, name);
+                    for (String schema : schemaList) {
+                        DdlUtils.findTables(jdbcTemplate, schema, schema, tableNamePattern, null, new DdlTableNameFilter() {
+
+                            @Override
+                            public boolean accept(String catalogName, String schemaName, String tableName) {
+                                if (modeValueFilter.accept(tableName)) {
+                                    matchSchemaTables.add(schemaName + "." + tableName);
+                                }
+                                return false;
+                            }
+                        });
+                    }
                 }
             }
+
             if (matchSchemaTables.size() == 1) {
                 return TABLE_FAIL;
             }
