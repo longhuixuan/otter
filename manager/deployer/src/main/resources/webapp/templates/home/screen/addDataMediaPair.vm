@@ -101,6 +101,19 @@ function changeKeyword(id, name, local) {
         <th>FileResolver文本:</th>
             <td><textarea cols="90" rows="10" name="$dataMediaPairGroup.resolverText.key">$!dataMediaPairGroup.resolverText.value</textarea></td>
       </tr>
+	  <tr>
+		<th>TableRouter类型:</th>
+		<td>
+			<select name="$dataMediaPairGroup.routerType.key" id="select">
+				<option value="CLAZZ" selected="selected">CLAZZ</option>
+				<option value="SOURCE">SOURCE</option>
+			</select><span class="red">*</span>
+		</td>
+	  </tr>
+	  <tr>
+		<th>TableRouter文本:</th>
+		<td><textarea cols="90" rows="10" name="$dataMediaPairGroup.routerText.key">$!dataMediaPairGroup.routerText.value</textarea></td>
+	  </tr>
     </table>
  </div>
   <input type="submit" name="submitKey" value="保存" class="button"></input>

@@ -102,6 +102,19 @@ function changeKeyword(id, name, local) {
         <th>FileResolver文本:</th>
 		<td><textarea cols="90" rows="10" name="$dataMediaPairGroup.resolverText.key">#if ($dataMediaPair.resolverData.ExtensionDataType.isClazz())$!dataMediaPair.resolverData.clazzPath#elseif($dataMediaPair.resolverData.ExtensionDataType.isSource())$!dataMediaPair.resolverData.sourceText#end</textarea><span class="red">*</span></td>
       </tr>
+	  <tr>
+		<th>TableRouter类型:</th>
+		<td>
+			<select name="$dataMediaPairGroup.routerType.key" id="select">
+				<option value="CLAZZ" #if ($dataMediaPair.routerData.ExtensionDataType.isClazz()) selected="selected" #end>CLAZZ</option>
+				<option value="SOURCE" #if ($dataMediaPair.routerData.ExtensionDataType.isSource()) selected="selected" #end>SOURCE</option>
+			</select><span class="red">*</span>
+		</td>
+	  </tr>
+	  <tr>
+		<th>TableRouter文本:</th>
+		<td><textarea cols="90" rows="10" name="$dataMediaPairGroup.routerText.key">#if ($dataMediaPair.routerData.ExtensionDataType.isClazz())$!dataMediaPair.routerData.clazzPath#elseif($dataMediaPair.routerData.ExtensionDataType.isSource())$!dataMediaPair.routerData.sourceText#end</textarea><span class="red">*</span></td>
+	  </tr>
     </table>
  </div>
   <input type="submit" name="submitKey" value="保存" class="button"></input>

@@ -16,14 +16,13 @@
 
 package com.alibaba.otter.shared.common.model.config.data;
 
+import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
-import org.apache.commons.lang.builder.ToStringBuilder;
-
-import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
 
 /**
  * 介质A -> 介质B 的同步映射关系对
@@ -41,6 +40,7 @@ public class DataMediaPair implements Serializable {
     private Long              pushWeight;                                     // 介质B中写入数据的权重
     private ExtensionData     resolverData;                                   // 关联数据解析类
     private ExtensionData     filterData;                                     // filter解析类
+    private ExtensionData     routerData;
     private ColumnPairMode    columnPairMode   = ColumnPairMode.INCLUDE;
     private List<ColumnPair>  columnPairs      = new ArrayList<ColumnPair>();
     private List<ColumnGroup> columnGroups     = new ArrayList<ColumnGroup>();
@@ -127,6 +127,14 @@ public class DataMediaPair implements Serializable {
         this.filterData = filterData;
     }
 
+    public ExtensionData getRouterData() {
+        return routerData;
+    }
+
+    public void setRouterData(ExtensionData routerData) {
+        this.routerData = routerData;
+    }
+
     public List<ColumnPair> getColumnPairs() {
         return columnPairs;
     }
@@ -149,6 +157,10 @@ public class DataMediaPair implements Serializable {
 
     public boolean isExistResolver() {
         return (resolverData != null && resolverData.isNotBlank());
+    }
+
+    public boolean isExistRouter(){
+        return (routerData != null && routerData.isNotBlank());
     }
 
     public ColumnPairMode getColumnPairMode() {

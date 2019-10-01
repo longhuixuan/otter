@@ -94,6 +94,18 @@ public class DataMediaPairAction {
             resolverData.setSourceText(dataMediaPairInfo.getField("resolverText").getStringValue());
         }
         dataMediaPair.setResolverData(resolverData);
+
+        // tablerouter解析
+        ExtensionDataType routerType = ExtensionDataType.valueOf(dataMediaPairInfo.getField("routerType").getStringValue());
+        ExtensionData routerData = new ExtensionData();
+        routerData.setExtensionDataType(routerType);
+        if (routerType.isClazz()) {
+            routerData.setClazzPath(dataMediaPairInfo.getField("routerText").getStringValue());
+        } else if (routerType.isSource()) {
+            routerData.setSourceText(dataMediaPairInfo.getField("routerText").getStringValue());
+        }
+        dataMediaPair.setRouterData(routerData);
+
         sourceDataMedia.setId(dataMediaPairInfo.getField("sourceDataMediaId").getLongValue());
         dataMediaPair.setSource(sourceDataMedia);
         targetDataMedia.setId(dataMediaPairInfo.getField("targetDataMediaId").getLongValue());
@@ -213,6 +225,17 @@ public class DataMediaPairAction {
             resolverData.setSourceText(dataMediaPairInfo.getField("resolverText").getStringValue());
         }
         dataMediaPair.setResolverData(resolverData);
+
+        // tablerouter解析
+        ExtensionDataType routerType = ExtensionDataType.valueOf(dataMediaPairInfo.getField("routerType").getStringValue());
+        ExtensionData routerData = new ExtensionData();
+        routerData.setExtensionDataType(routerType);
+        if (routerType.isClazz()) {
+            routerData.setClazzPath(dataMediaPairInfo.getField("routerText").getStringValue());
+        } else if (routerType.isSource()) {
+            routerData.setSourceText(dataMediaPairInfo.getField("routerText").getStringValue());
+        }
+        dataMediaPair.setRouterData(routerData);
 
         sourceDataMedia.setId(dataMediaPairInfo.getField("sourceDataMediaId").getLongValue());
         dataMediaPair.setSource(sourceDataMedia);

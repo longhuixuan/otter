@@ -599,6 +599,10 @@ public class MessageParser {
         boolean needAllColumns = false;
         // 只要有filter/resolver逻辑存在，就需要尽可能保留所有字段
         for (DataMediaPair pair : pipeline.getPairs()) {
+            //表路由规则存在，则保留所有字段
+            if (pair.isExistRouter()) {
+                return true;
+            }
             needAllColumns |= pair.isExistFilter();
             if (pair.getResolverData() != null && pair.getResolverData().getExtensionDataType() != null) {
                 if (pair.getResolverData().getExtensionDataType().isClazz()) {

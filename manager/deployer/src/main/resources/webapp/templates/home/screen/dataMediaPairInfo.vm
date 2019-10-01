@@ -73,6 +73,22 @@ $control.setTemplate("home:navigation.vm")
 		</div>
 	</td>
   </tr>
+  <th>Table Router：</th>
+      <td>
+         #if(!$stringUtil.isEmpty($!dataMediaPair.routerData.clazzPath))
+             [$!dataMediaPair.routerData.extensionDataType : $!dataMediaPair.routerData.clazzPath]
+         #elseif(!$stringUtil.isEmpty($!dataMediaPair.routerData.sourceText))
+             [$!dataMediaPair.routerData.extensionDataType : <a id="showtext-position3" onClick="showdiv('contentid-position3','showtext-position3')"><span class="ico_font">查看</span></a>]
+         #end
+      </td>
+  </tr>
+  <tr>
+     <td class="message" colspan="2">
+         <div id="contentid-position3" class="contentid" style="display:none">
+             <textarea cols="90" rows="10">#noescape() $!dataMediaPair.routerData.sourceText #end</textarea>
+         </div>
+     </td>
+  </tr>
   <tr>
 	<th>字段同步：</th>
 		<td>
