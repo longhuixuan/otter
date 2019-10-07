@@ -289,6 +289,8 @@ public class DataMediaServiceImpl implements DataMediaService {
             // if (dataMedia instanceof DbDataMedia) {
             // dataMediaDo.setProperties(JsonUtils.marshalToString((DbDataMedia) dataMedia));
             // }
+
+
             dataMediaDo.setProperties(JsonUtils.marshalToString(dataMedia));
             dataMediaDo.setGmtCreate(dataMedia.getGmtCreate());
             dataMediaDo.setGmtModified(dataMedia.getGmtModified());

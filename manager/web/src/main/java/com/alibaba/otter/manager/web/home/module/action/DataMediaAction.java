@@ -27,6 +27,7 @@ import com.alibaba.citrus.turbine.dataresolver.Param;
 import com.alibaba.citrus.webx.WebxException;
 import com.alibaba.otter.manager.biz.common.exceptions.RepeatConfigureException;
 import com.alibaba.otter.manager.biz.config.datamedia.DataMediaService;
+import com.alibaba.otter.manager.biz.config.datamedia.impl.DataMediaServiceImpl;
 import com.alibaba.otter.manager.biz.config.datamediapair.DataMediaPairService;
 import com.alibaba.otter.manager.biz.config.datamediasource.DataMediaSourceService;
 import com.alibaba.otter.manager.web.common.WebConstant;
@@ -34,9 +35,12 @@ import com.alibaba.otter.shared.common.model.config.data.DataMedia;
 import com.alibaba.otter.shared.common.model.config.data.DataMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.db.DbMediaSource;
 import com.alibaba.otter.shared.common.model.config.data.mq.MqMediaSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class DataMediaAction extends AbstractAction {
-
+    private static final Logger logger = LoggerFactory.getLogger(DataMediaAction.class);
     @Resource(name = "dataMediaService")
     private DataMediaService       dataMediaService;
 
@@ -65,7 +69,6 @@ public class DataMediaAction extends AbstractAction {
         } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {
             dataMedia.setSource((MqMediaSource) dataMediaSource);
         }
-
         try {
             dataMediaService.create(dataMedia);
         } catch (RepeatConfigureException rce) {

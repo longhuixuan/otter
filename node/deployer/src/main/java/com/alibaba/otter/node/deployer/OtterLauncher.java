@@ -33,6 +33,9 @@ public class OtterLauncher {
     private static final Logger logger = LoggerFactory.getLogger(OtterLauncher.class);
 
     public static void main(String[] args) throws Throwable {
+        System.setProperty("nid","1");
+
+
         // 启动dragoon client
         // startDragoon();
         // logger.info("INFO ## the dragoon is start now ......");
