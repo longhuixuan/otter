@@ -23,49 +23,50 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 数据库方言定义接口
- * 
+ *
  * @author jianghang 2011-10-27 上午11:24:15
  * @version 4.0.0
  */
 public interface DbDialect {
+    boolean isNoSqlDB();
 
-    public String getName();
+    String getName();
 
-    public String getVersion();
+    String getVersion();
 
-    public int getMajorVersion();
+    int getMajorVersion();
 
-    public int getMinorVersion();
+    int getMinorVersion();
 
-    public String getDefaultSchema();
+    String getDefaultSchema();
 
-    public String getDefaultCatalog();
+    String getDefaultCatalog();
 
-    public boolean isCharSpacePadded();
+    boolean isCharSpacePadded();
 
-    public boolean isCharSpaceTrimmed();
+    boolean isCharSpaceTrimmed();
 
-    public boolean isEmptyStringNulled();
+    boolean isEmptyStringNulled();
 
-    public boolean isSupportMergeSql();
+    boolean isSupportMergeSql();
 
-    public boolean isDRDS();
+    boolean isDRDS();
 
-    public LobHandler getLobHandler();
+    LobHandler getLobHandler();
 
-    public JdbcTemplate getJdbcTemplate();
+    <T> T getJdbcTemplate();
 
-    public TransactionTemplate getTransactionTemplate();
+    TransactionTemplate getTransactionTemplate();
 
-    public SqlTemplate getSqlTemplate();
+    <T> T getSqlTemplate();
 
-    public Table findTable(String schema, String table);
+    Table findTable(String schema, String table);
 
-    public Table findTable(String schema, String table, boolean useCache);
+    Table findTable(String schema, String table, boolean useCache);
 
-    public String getShardColumns(String schema, String table);
+    String getShardColumns(String schema, String table);
 
-    public void reloadTable(String schema, String table);
+    void reloadTable(String schema, String table);
 
-    public void destory();
+    void destory();
 }

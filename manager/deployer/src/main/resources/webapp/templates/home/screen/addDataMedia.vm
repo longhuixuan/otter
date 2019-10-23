@@ -77,6 +77,7 @@ function changeKeyword(id, name) {
 			单表配置: alibaba.product<br/>
 			分表配置: alibaba[1-64].product , alibaba.product[01-32]<br/>
 			正则配置: (.*).(.*)<br/>
+            es: schema name：es的索引,table name：es的type<br/>
 		</td>
       </tr>
     </table>

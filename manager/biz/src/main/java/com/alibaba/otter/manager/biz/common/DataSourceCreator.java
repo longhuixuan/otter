@@ -16,14 +16,31 @@
 
 package com.alibaba.otter.manager.biz.common;
 
+import java.net.InetAddress;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.sql.DataSource;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -58,6 +75,8 @@ public class DataSourceCreator implements DisposableBean {
     private int                     minEvictableIdleTimeMillis    = 30 * 60 * 1000;
 
     private List<DataSourceHanlder> dataSourceHandlers;
+
+    private Map<String, RestHighLevelClient> esclientMap = new ConcurrentHashMap<String, RestHighLevelClient>();
 
     /**
      * 直接创建数据源，不做cache
@@ -187,9 +206,31 @@ public class DataSourceCreator implements DisposableBean {
         } else {
             logger.error("ERROR ## Unknow database type");
         }
-
         return dbcpDs;
     }
+
+
+    public RestHighLevelClient getRestHighLevelClient(DataMediaSource dataMediaSource) {
+        Assert.notNull(dataMediaSource);
+        final DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
+        RestHighLevelClient client = esclientMap.get(dbMediaSource.getName());
+        if (client == null) {
+            HttpHost httpHost = HttpHost.create(dbMediaSource.getUrl());
+            RestClientBuilder restClientBuilder = RestClient.builder(httpHost);
+            restClientBuilder.setHttpClientConfigCallback(new RestClientBuilder.HttpClientConfigCallback() {
+                @Override
+                public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
+                    CredentialsProvider provider = new BasicCredentialsProvider();
+                    provider.setCredentials(AuthScope.ANY,new UsernamePasswordCredentials(dbMediaSource.getUsername(), dbMediaSource.getPassword()));
+                    return httpClientBuilder.setDefaultCredentialsProvider(provider);
+                }
+            });
+            client= new RestHighLevelClient(restClientBuilder);
+            esclientMap.put(dbMediaSource.getName(), client);
+        }
+        return client;
+}
+
 
     public void setMaxWait(int maxWait) {
         this.maxWait = maxWait;

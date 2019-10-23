@@ -34,6 +34,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.alibaba.otter.node.etl.common.db.dialect.SqlTemplate;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.ddlutils.model.Column;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -440,7 +442,7 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
 
         private List<String> select(DbDialect dbDialect, String schemaName, String tableName, TableData keyTableData,
                                     TableData columnTableData) throws InterruptedException {
-            String selectSql = dbDialect.getSqlTemplate().getSelectSql(schemaName,
+            String selectSql = ((SqlTemplate)dbDialect.getSqlTemplate()).getSelectSql(schemaName,
                 tableName,
                 keyTableData.columnNames,
                 columnTableData.columnNames);
@@ -451,7 +453,7 @@ public class DatabaseExtractor extends AbstractExtractor<DbBatch> implements Ini
                 }
 
                 try {
-                    List<List<String>> result = dbDialect.getJdbcTemplate().query(selectSql,
+                    List<List<String>> result = ((JdbcTemplate)dbDialect.getJdbcTemplate()).query(selectSql,
                         keyTableData.columnValues,
                         keyTableData.columnTypes,
                         new RowDataMapper(columnTableData.columnTypes));

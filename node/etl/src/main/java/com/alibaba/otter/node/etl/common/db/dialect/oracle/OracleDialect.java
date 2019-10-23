@@ -64,6 +64,8 @@ public class OracleDialect extends AbstractDbDialect {
         return null;
     }
 
+
+
     public String getDefaultSchema() {
         return (String) jdbcTemplate.queryForObject("SELECT sys_context('USERENV', 'CURRENT_SCHEMA') FROM dual",
                                                     String.class);

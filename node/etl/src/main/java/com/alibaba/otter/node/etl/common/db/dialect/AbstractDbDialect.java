@@ -206,4 +206,9 @@ public abstract class AbstractDbDialect implements DbDialect {
                                   String tableName) {
         // for subclass to extend
     }
+
+    @Override
+    public boolean isNoSqlDB() {
+        return false;
+    }
 }

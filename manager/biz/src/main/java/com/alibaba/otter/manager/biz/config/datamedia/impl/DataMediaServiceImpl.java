@@ -16,15 +16,22 @@
 
 package com.alibaba.otter.manager.biz.config.datamedia.impl;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 import javax.sql.DataSource;
 
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.apache.ddlutils.model.Column;
 import org.apache.ddlutils.model.Table;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -69,19 +76,60 @@ public class DataMediaServiceImpl implements DataMediaService {
             return columnResult;
         }
 
-        DataSource dataSource = dataSourceCreator.createDataSource(dataMedia.getSource());
-        // 针对multi表，直接获取第一个匹配的表结构
-        String schemaName = dataMedia.getNamespaceMode().getSingleValue();
-        String tableName = dataMedia.getNameMode().getSingleValue();
-        try {
-            Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), schemaName, schemaName, tableName);
-            for (Column column : table.getColumns()) {
-                columnResult.add(column.getName());
+        if(dataMedia.getSource().getType().isElasticSearch()){
+            //String schemaName = dataMedia.getNamespaceMode().getSingleValue();
+            String tableName = dataMedia.getNameMode().getSingleValue();
+            RestHighLevelClient client = dataSourceCreator.getRestHighLevelClient(dataMedia.getSource());
+            if (client == null) {
+                return columnResult;
             }
-        } catch (Exception e) {
-            logger.error("ERROR ## DdlUtils find table happen error!", e);
+            String[] indexs=new String[dataMedia.getNamespaceMode().getMultiValue().size()];
+            GetMappingsRequest request = new GetMappingsRequest();
+            request.indices(dataMedia.getNamespaceMode().getMultiValue().toArray(indexs));
+            //boolean ignoreUnavailable, boolean allowNoIndices, boolean expandToOpenIndices, boolean expandToClosedIndices
+            request.indicesOptions(IndicesOptions.lenientExpandOpen());
+            request.types(tableName);
+            GetMappingsResponse mappingResp = null;
+            try {
+                mappingResp = client.indices().getMapping(request, RequestOptions.DEFAULT);
+            } catch (IOException e) {
+                logger.error("ERROR ## es get index mapping  error!", e);
+                return null;
+            }
+            String iteKey = mappingResp.getMappings().keysIt().next();
+            ImmutableOpenMap<String, MappingMetaData> mappings = mappingResp.getMappings().get(iteKey);
+            if (mappings != null) {
+                for (ObjectObjectCursor<String, MappingMetaData> typeEntry : mappings) {
+                    if (tableName.equalsIgnoreCase(typeEntry.key)) {
+                        try {
+                            Map<String, Object> fields = typeEntry.value.sourceAsMap();
+                            Map mf = (Map) fields.get("properties");
+                            Iterator iter = mf.entrySet().iterator();
+                            while (iter.hasNext()) {
+                                //字段
+                                Map.Entry<String, Map> ob = (Map.Entry<String, Map>) iter.next();
+                                columnResult.add(ob.getKey());
+                            }
+                        } catch (Exception e) {
+                            logger.error("ERROR ## ElasticSearch find table happen error!", e);
+                        }
+                    }
+                }
+            }
+        }else{
+            DataSource dataSource = dataSourceCreator.createDataSource(dataMedia.getSource());
+            // 针对multi表，直接获取第一个匹配的表结构
+            String schemaName = dataMedia.getNamespaceMode().getSingleValue();
+            String tableName = dataMedia.getNameMode().getSingleValue();
+            try {
+                Table table = DdlUtils.findTable(new JdbcTemplate(dataSource), schemaName, schemaName, tableName);
+                for (Column column : table.getColumns()) {
+                    columnResult.add(column.getName());
+                }
+            } catch (Exception e) {
+                logger.error("ERROR ## DdlUtils find table happen error!", e);
+            }
         }
-
         return columnResult;
     }
 
@@ -312,7 +360,9 @@ public class DataMediaServiceImpl implements DataMediaService {
         DataMedia dataMedia = null;
         try {
             DataMediaSource dataMediaSource = dataMediaSourceService.findById(dataMediaDo.getDataMediaSourceId());
-            if (dataMediaSource.getType().isMysql() || dataMediaSource.getType().isOracle()) {
+            if (dataMediaSource.getType().isMysql()
+                    || dataMediaSource.getType().isOracle()
+                    || dataMediaSource.getType().isElasticSearch()) {
                 dataMedia = JsonUtils.unmarshalFromString(dataMediaDo.getProperties(), DbDataMedia.class);
                 dataMedia.setSource(dataMediaSource);
             } else if (dataMediaSource.getType().isNapoli() || dataMediaSource.getType().isMq()) {

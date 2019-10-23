@@ -119,6 +119,7 @@
 		<spring-version>3.1.2.RELEASE</spring-version>
 		<jetty_verion>8.1.7.v20120910</jetty_verion>
 		<otter_canal_version>1.1.4</otter_canal_version>
+		<elasticsearch_version>6.4.4</elasticsearch_version>
 	</properties>
 
 	<modules>
@@ -126,6 +127,13 @@
 		<module>manager</module>
 		<module>node</module>
 	</modules>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.elasticsearch.client</groupId>
+			<artifactId>elasticsearch-rest-high-level-client</artifactId>
+		</dependency>
+	</dependencies>
 
 	<dependencyManagement>
 		<dependencies>
@@ -327,6 +335,13 @@
                 <artifactId>jsr305</artifactId>
                 <version>3.0.2</version>
             </dependency>
+
+			<dependency>
+				<groupId>org.elasticsearch.client</groupId>
+				<artifactId>elasticsearch-rest-high-level-client</artifactId>
+				<version>6.4.1</version>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 

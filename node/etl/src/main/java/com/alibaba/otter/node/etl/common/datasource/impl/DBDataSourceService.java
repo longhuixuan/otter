@@ -16,15 +16,36 @@
 
 package com.alibaba.otter.node.etl.common.datasource.impl;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import javax.sql.DataSource;
 
+import com.google.common.cache.*;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -74,63 +95,166 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
      * key = pipelineId<br>
      * value = key(dataMediaSourceId)-value(DataSource)<br>
      */
-    private Map<Long, Map<DbMediaSource, DataSource>> dataSources;
+    //private Map<Long, Map<DbMediaSource, DataSource>> dataSources;
+    private LoadingCache<Long, LoadingCache<DbMediaSource, Object>> dataSources;
 
     public DBDataSourceService(){
-        // 构建第一层map
-        dataSources = OtterMigrateMap.makeComputingMap(new Function<Long, Map<DbMediaSource, DataSource>>() {
-
-            public Map<DbMediaSource, DataSource> apply(final Long pipelineId) {
-                // 构建第二层map
-                return OtterMigrateMap.makeComputingMap(new Function<DbMediaSource, DataSource>() {
-
-                    public DataSource apply(DbMediaSource dbMediaSource) {
-
-                        // 扩展功能,可以自定义一些自己实现的 dataSource
-                        DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
-                        if (customDataSource != null) {
-                            return customDataSource;
+        // 设置soft策略
+        CacheBuilder<Long, LoadingCache<DbMediaSource, Object>> cacheBuilder = CacheBuilder.newBuilder().softValues()
+                .removalListener(new RemovalListener<Long, LoadingCache<DbMediaSource, Object>>() {
+                    @Override
+                    public void onRemoval(RemovalNotification<Long, LoadingCache<DbMediaSource, Object>> paramR) {
+                        if (dataSources == null) {
+                            return;
                         }
-
-                        return createDataSource(dbMediaSource.getUrl(),
-                            dbMediaSource.getUsername(),
-                            dbMediaSource.getPassword(),
-                            dbMediaSource.getDriver(),
-                            dbMediaSource.getType(),
-                            dbMediaSource.getEncode());
+                        for (Object dbconn : paramR.getValue().asMap().values()) {
+                            try {
+                                if (dbconn instanceof DataSource) {
+                                    DataSource source = (DataSource) dbconn;
+                                    // for filter to destroy custom datasource
+                                    if (letHandlerDestroyIfSupport(paramR.getKey(), source)) {
+                                        continue;
+                                    }
+                                    // fallback for regular destroy TODO need
+                                    // to integrate to handler
+                                    BasicDataSource basicDataSource = (BasicDataSource) source;
+                                    basicDataSource.close();
+                                } else if (dbconn instanceof RestHighLevelClient) {
+                                    RestHighLevelClient client = (RestHighLevelClient) dbconn;
+                                    client.close();
+                                }
+                            } catch (Exception e) {
+                                logger.error("ERROR ## close the datasource has an error", e);
+                            }
+                        }
                     }
+                });
 
+        // 构建第一层map
+        dataSources = cacheBuilder.build(new CacheLoader<Long, LoadingCache<DbMediaSource, Object>>() {
+            @Override
+            public LoadingCache<DbMediaSource, Object> load(final Long pipelineId) throws Exception {
+                return CacheBuilder.newBuilder().maximumSize(1000).build(new CacheLoader<DbMediaSource, Object>() {
+                    @Override
+                    public Object load(DbMediaSource dbMediaSource) throws Exception {
+                        // 扩展功能,可以自定义一些自己实现的 dataSource
+                        if (dbMediaSource.getType().isElasticSearch()) {
+                            return getRestHighLevelClient(dbMediaSource);
+                        } else {
+                            DataSource customDataSource = preCreate(pipelineId, dbMediaSource);
+                            if (customDataSource != null) {
+                                return customDataSource;
+                            }
+                            return createDataSource(dbMediaSource.getUrl(), dbMediaSource.getUsername(),
+                                    dbMediaSource.getPassword(), dbMediaSource.getDriver(), dbMediaSource.getType(),
+                                    dbMediaSource.getEncode());
+                        }
+                    }
                 });
             }
-        });
 
+        });
     }
 
-    public DataSource getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
+
+
+    /**
+     * 创建elasticSearch client
+     *
+     * @param dbMediaSource
+     * @return
+     */
+    public RestHighLevelClient getRestHighLevelClient(final DbMediaSource dbMediaSource) {
+        Assert.notNull(dbMediaSource);
+        HttpHost httpHost = HttpHost.create(dbMediaSource.getUrl());
+        RestClientBuilder restClientBuilder = RestClient.builder(httpHost);
+        restClientBuilder.setHttpClientConfigCallback(new RestClientBuilder.HttpClientConfigCallback() {
+            @Override
+            public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
+                CredentialsProvider provider = new BasicCredentialsProvider();
+                provider.setCredentials(AuthScope.ANY,new UsernamePasswordCredentials(dbMediaSource.getUsername(), dbMediaSource.getPassword()));
+                return httpClientBuilder.setDefaultCredentialsProvider(provider);
+            }
+        });
+        RestHighLevelClient client= new RestHighLevelClient(restClientBuilder);
+        return client;
+    }
+
+
+
+    public Object getDataSource(long pipelineId, DataMediaSource dataMediaSource) {
         Assert.notNull(dataMediaSource);
-        return dataSources.get(pipelineId).get(dataMediaSource);
+        DbMediaSource dbMediaSource = (DbMediaSource) dataMediaSource;
+        try {
+            return dataSources.get(pipelineId).get(dbMediaSource);
+        } catch (ExecutionException e) {
+            return null;
+        }
     }
 
     public void destroy(Long pipelineId) {
-        Map<DbMediaSource, DataSource> sources = dataSources.remove(pipelineId);
-        if (sources != null) {
-            for (DataSource source : sources.values()) {
-                try {
-                    // for filter to destroy custom datasource
-                    if (letHandlerDestroyIfSupport(pipelineId, source)) {
-                        continue;
+        try {
+            LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+            // invalidate(pipelineId);
+            if (sources != null) {
+                for (Object dbconn : sources.asMap().values()) {
+                    try {
+                        if (dbconn instanceof DataSource) {
+                            DataSource source = (DataSource) dbconn;
+                            // for filter to destroy custom datasource
+                            if (letHandlerDestroyIfSupport(pipelineId, source)) {
+                                continue;
+                            } // fallback for regular destroy TODO need to
+                            // integrate to handler
+                            BasicDataSource basicDataSource = (BasicDataSource) source;
+                            basicDataSource.close();
+                        } else if (dbconn instanceof RestHighLevelClient) {
+                            RestHighLevelClient client = (RestHighLevelClient) dbconn;
+                            client.close();
+                        }
+                    } catch (IOException e ) {
+                        logger.error("ERROR ## close the datasource has an error", e);
+                    } catch (SQLException e){
+                        logger.error("ERROR ## close the datasource has an error", e);
                     }
+                }
+                sources.invalidateAll();
+                sources.cleanUp();
+            }
+        } catch (ExecutionException e) {
+            logger.error("ERROR ## destroy the datasource has an error", e);
+        }
+    }
 
-                    // fallback for regular destroy
-                    // TODO need to integrate to handler
-                    BasicDataSource basicDataSource = (BasicDataSource) source;
-                    basicDataSource.close();
+    @Override
+    public void destroy(Long pipelineId, DbMediaSource source) {
+        try {
+            LoadingCache<DbMediaSource, Object> sources = dataSources.get(pipelineId);
+            // invalidate(pipelineId);
+            if (sources != null) {
+                Object dbconn = sources.get(source);
+                try {
+                    if (dbconn instanceof DataSource) {
+                        DataSource dsource = (DataSource) dbconn;
+                        // for filter to destroy custom datasource
+                        if (!letHandlerDestroyIfSupport(pipelineId, dsource)) {
+                            BasicDataSource basicDataSource = (BasicDataSource) dsource;
+                            basicDataSource.close();
+                        }
+                    } else if (dbconn instanceof RestHighLevelClient) {
+                        RestHighLevelClient client = (RestHighLevelClient) dbconn;
+                        client.close();
+                    }
                 } catch (SQLException e) {
                     logger.error("ERROR ## close the datasource has an error", e);
+                } catch (Exception e) {
+                    logger.error("ERROR ## close the datasource has an error", e);
+                } finally {
+                    sources.invalidate(source);
                 }
             }
-
-            sources.clear();
+        } catch (ExecutionException e) {
+            logger.error("ERROR ## destroy the datasource has an error", e);
         }
     }
 
@@ -152,9 +276,12 @@ public class DBDataSourceService implements DataSourceService, DisposableBean {
     }
 
     public void destroy() throws Exception {
-        for (Long pipelineId : dataSources.keySet()) {
-            destroy(pipelineId);
-        }
+        dataSources.invalidateAll();
+        dataSources.cleanUp();
+
+//        for (Long pipelineId : dataSources.) {
+//            destroy(pipelineId);
+//        }
     }
 
     private DataSource createDataSource(String url, String userName, String password, String driverClassName,

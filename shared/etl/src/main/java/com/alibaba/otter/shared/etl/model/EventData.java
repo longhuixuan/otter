@@ -28,7 +28,7 @@ import com.alibaba.otter.shared.common.utils.OtterToStringStyle;
 
 /**
  * 每条变更数据.
- * 
+ *
  * @author xiaoqing.zhouxq 2011-8-9 下午03:42:20
  */
 public class EventData implements ObjectData, Serializable {
@@ -38,83 +38,95 @@ public class EventData implements ObjectData, Serializable {
     /**
      * otter内部维护的一套tableId，与manager中得到的table Id对应
      */
-    private long              tableId          = -1;
+    private long tableId = -1;
 
-    private String            tableName;
+    private String tableName;
 
-    private String            schemaName;
+    private String schemaName;
 
     /**
      * 变更数据的业务类型(I/U/D/C/A/E),与canal中的EntryProtocol中定义的EventType一致.
      */
-    private EventType         eventType;
+    private EventType eventType;
 
     /**
      * 变更数据的业务时间.
      */
-    private long              executeTime;
+    private long executeTime;
 
     /**
      * 变更前的主键值,如果是insert/delete变更前和变更后的主键值是一样的.
      */
-    private List<EventColumn> oldKeys          = new ArrayList<EventColumn>();
+    private List<EventColumn> oldKeys = new ArrayList<EventColumn>();
 
     /**
      * 变更后的主键值,如果是insert/delete变更前和变更后的主键值是一样的.
      */
-    private List<EventColumn> keys             = new ArrayList<EventColumn>();
+    private List<EventColumn> keys = new ArrayList<EventColumn>();
 
     /**
      * 非主键的其他字段
      */
-    private List<EventColumn> columns          = new ArrayList<EventColumn>();
+    private List<EventColumn> columns = new ArrayList<EventColumn>();
 
     // ====================== 运行过程中对数据的附加属性 =============================
     /**
      * 预计的size大小，基于binlog event的推算
      */
-    private long              size             = 1024;
+    private long size = 1024;
 
     /**
      * 同步映射关系的id
      */
-    private long              pairId           = -1;
+    private long pairId = -1;
 
     /**
      * 当eventType =
      * CREATE/ALTER/ERASE时，就是对应的sql语句，其他情况为动态生成的INSERT/UPDATE/DELETE sql
      */
-    private String            sql;
+    private String sql;
 
     /**
      * ddl/query的schemaName，会存在跨库ddl，需要保留执行ddl的当前schemaName
      */
-    private String            ddlSchemaName;
+    private String ddlSchemaName;
 
     /**
      * 自定义的同步模式, 允许覆盖默认的pipeline parameter，比如针对补救数据同步
      */
-    private SyncMode          syncMode;
+    private SyncMode syncMode;
 
     /**
      * 自定义的同步一致性，允许覆盖默认的pipeline parameter，比如针对字段组强制反查数据库
      */
-    private SyncConsistency   syncConsistency;
+    private SyncConsistency syncConsistency;
 
     /**
      * 是否为remedy补救数据，比如回环补救自动产生的数据，或者是freedom产生的手工订正数据
      */
-    private boolean           remedy           = false;
+    private boolean remedy = false;
 
     /**
      * 生成对应的hint内容
      */
-    private String            hint;
+    private String hint;
 
     /**
      * 生成sql是否忽略schema,比如针对tddl/drds,需要忽略schema
      */
-    private boolean           withoutSchema    = false;
+    private boolean withoutSchema = false;
+
+
+    private String exeResult;
+
+
+    public String getExeResult() {
+        return exeResult;
+    }
+
+    public void setExeResult(String exeResult) {
+        this.exeResult = exeResult;
+    }
 
     public long getTableId() {
         return tableId;
@@ -314,6 +326,7 @@ public class EventData implements ObjectData, Serializable {
         data.setRemedy(remedy);
         data.setHint(hint);
         data.setWithoutSchema(withoutSchema);
+        data.setExeResult(exeResult);
         return data;
     }
 
@@ -334,6 +347,7 @@ public class EventData implements ObjectData, Serializable {
         result = prime * result + ((schemaName == null) ? 0 : schemaName.hashCode());
         result = prime * result + (int) (tableId ^ (tableId >>> 32));
         result = prime * result + ((tableName == null) ? 0 : tableName.hashCode());
+        result = prime * result + ((exeResult == null ? 0 : exeResult.hashCode()));
         return result;
     }
 
@@ -362,6 +376,10 @@ public class EventData implements ObjectData, Serializable {
         if (tableName == null) {
             if (other.tableName != null) return false;
         } else if (!tableName.equals(other.tableName)) return false;
+
+        if (exeResult == null) {
+            if (other.exeResult != null) return false;
+        } else if (!exeResult.equals(other.exeResult)) return false;
         return true;
     }
 

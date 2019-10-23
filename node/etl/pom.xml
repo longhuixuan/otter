@@ -85,6 +85,11 @@
 		  <groupId>org.eclipse.jetty</groupId>
 		  <artifactId>jetty-http</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.elasticsearch.client</groupId>
+			<artifactId>elasticsearch-rest-high-level-client</artifactId>
+		</dependency>
+
 		<!-- test dependency -->
 		<dependency>
 			<groupId>org.jtester</groupId>
@@ -96,5 +101,7 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+
 	</dependencies>
 </project>

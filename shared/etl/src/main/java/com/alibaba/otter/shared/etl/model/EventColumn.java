@@ -29,25 +29,25 @@ public class EventColumn implements Serializable {
 
     private static final long serialVersionUID = 8881024631437131042L;
 
-    private int               index;
+    private int index;
 
-    private int               columnType;
+    private int columnType;
 
-    private String            columnName;
+    private String columnName;
 
     /**
      * timestamp,Datetime是一个long型的数字.
      */
-    private String            columnValue;
+    private String columnValue;
 
-    private boolean           isNull;
+    private boolean isNull;
 
-    private boolean           isKey;
+    private boolean isKey;
 
     /**
      * 2012.08.09 add by ljh , 新加字段，用于表明是否为真实变更字段，只针对非主键字段有效<br>
      * 因为FileResolver/EventProcessor会需要所有字段数据做分析，但又想保留按需字段同步模式
-     * 
+     *
      * <pre>
      * 可以简单理解isUpdate代表是否需要在目标库执行数据变更，针对update有效，默认insert/delete为true
      * 1. row模式，所有字段均为updated
@@ -55,7 +55,19 @@ public class EventColumn implements Serializable {
      * 3. 其余场景，根据判断是否变更过，设置updated数据
      * </pre>
      */
-    private boolean           isUpdate         = true;
+    private boolean isUpdate = true;
+
+    //主键key生成函数
+    private String pkFunctionName = "ori";
+
+    public String getPkFunctionName() {
+        return pkFunctionName;
+    }
+
+    public void setPkFunctionName(String pkFunctionName) {
+        this.pkFunctionName = pkFunctionName;
+    }
+
 
     public int getColumnType() {
         return columnType;
@@ -128,6 +140,7 @@ public class EventColumn implements Serializable {
         column.setKey(isKey);
         column.setNull(isNull);
         column.setUpdate(isUpdate);
+        column.setPkFunctionName(pkFunctionName);
         return column;
     }
 
@@ -142,26 +155,58 @@ public class EventColumn implements Serializable {
         result = prime * result + (isKey ? 1231 : 1237);
         result = prime * result + (isNull ? 1231 : 1237);
         result = prime * result + (isUpdate ? 1231 : 1237);
+        result = prime * result + ((pkFunctionName == null) ? 0 : pkFunctionName.hashCode());
         return result;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
         EventColumn other = (EventColumn) obj;
         if (columnName == null) {
-            if (other.columnName != null) return false;
-        } else if (!columnName.equals(other.columnName)) return false;
-        if (columnType != other.columnType) return false;
+            if (other.columnName != null){
+                return false;
+            }
+        } else if (!columnName.equals(other.columnName)) {
+            return false;
+        }
+        if (columnType != other.columnType) {
+            return false;
+        }
         if (columnValue == null) {
-            if (other.columnValue != null) return false;
-        } else if (!columnValue.equals(other.columnValue)) return false;
-        if (index != other.index) return false;
-        if (isKey != other.isKey) return false;
-        if (isNull != other.isNull) return false;
-        if (isUpdate != other.isUpdate) return false;
+            if (other.columnValue != null) {
+                return false;
+            }
+        } else if (!columnValue.equals(other.columnValue)){
+            return false;
+        }
+        if (index != other.index){
+            return false;
+        }
+        if (isKey != other.isKey) {
+            return false;
+        }
+        if (isNull != other.isNull) {
+            return false;
+        }
+        if (isUpdate != other.isUpdate) {
+            return false;
+        }
+        if(pkFunctionName == null){
+            if (other.pkFunctionName != null){
+                return false;
+            }
+        }else if(!pkFunctionName.equals(other.pkFunctionName)){
+            return false;
+        }
         return true;
     }
 

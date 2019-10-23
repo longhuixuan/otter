@@ -188,7 +188,8 @@ public class ConfigHelper {
                 values.add(builder.toString());
             }
             return new ModeValue(Mode.MULTI, values);
-        } else if (isWildCard(value)) {// 通配符支持
+        } else if (isWildCard(value)) {
+            // 通配符支持
             return new ModeValue(Mode.WILDCARD, Arrays.asList(value));
         } else {
             return new ModeValue(Mode.SINGLE, Arrays.asList(value));

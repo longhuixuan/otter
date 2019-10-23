@@ -69,7 +69,7 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         result.setSize(data.getSize());
         result.setHint(data.getHint());
         result.setWithoutSchema(data.isWithoutSchema());
-        if (data.getEventType().isDdl()) {
+        if (data.getEventType().isDdl()  && dataMedia.getSource().getType().isMysql()) {
             // ddl不需要处理字段
             if (StringUtils.equalsIgnoreCase(result.getSchemaName(), data.getSchemaName())
                 && StringUtils.equalsIgnoreCase(result.getTableName(), data.getTableName())) {
@@ -109,12 +109,20 @@ public class RowDataTransformer extends AbstractOtterTransformer<EventData, Even
         TableInfoHolder tableHolder = null;
         if (useTableTransform || enableCompatibleMissColumn) {// 控制一下是否需要反查table
                                                               // meta信息，如果同构数据库，完全没必要反查
-            // 获取目标库的表信息
-            DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
-                (DbMediaSource) dataMedia.getSource());
-
-            Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
-            tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+            if (dataMedia.getSource().getType().isMysql()||dataMedia.getSource().getType().isOracle()){
+                DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
+                        (DbMediaSource) dataMedia.getSource());
+                Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
+                tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
+            }
+//
+//
+//            // 获取目标库的表信息
+//            DbDialect dbDialect = dbDialectFactory.getDbDialect(dataMediaPair.getPipelineId(),
+//                (DbMediaSource) dataMedia.getSource());
+//
+//            Table table = dbDialect.findTable(result.getSchemaName(), result.getTableName());
+//            tableHolder = new TableInfoHolder(table, useTableTransform, enableCompatibleMissColumn);
         }
 
         // 处理column转化
