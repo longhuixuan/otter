@@ -5,6 +5,7 @@
 package com.alibaba.otter.node.etl.common.db.dialect.elastic;
 
 import com.alibaba.otter.node.etl.common.db.dialect.NoSqlTemplate;
+import com.alibaba.otter.node.etl.common.db.dialect.elastic.type.TypeHandlerFactory;
 import com.alibaba.otter.node.etl.common.db.exception.ConnClosedException;
 import com.alibaba.otter.node.etl.common.db.utils.SqlUtils;
 import com.alibaba.otter.shared.etl.model.EventColumn;
@@ -86,12 +87,12 @@ public class ElasticSearchTemplate implements NoSqlTemplate {
         Map recordM = new HashMap();
         for (EventColumn column : event.getKeys()) {
             if (StringUtils.isNotEmpty(column.getColumnValue())) {
-                recordM.put(column.getColumnName(), column.getColumnValue());
+                recordM.put(column.getColumnName(), TypeHandlerFactory.convert(column.getColumnType(),column.getColumnValue()));
             }
         }
         for (EventColumn column : event.getColumns()) {
             if (StringUtils.isNotEmpty(column.getColumnValue())) {
-                recordM.put(column.getColumnName(), column.getColumnValue());
+                recordM.put(column.getColumnName(), TypeHandlerFactory.convert(column.getColumnType(),column.getColumnValue()));
             }
         }
         return recordM;

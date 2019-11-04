@@ -95,6 +95,11 @@ public class ElasticSearchDialect extends AbstractNoSQLDialect {
                 });
     }
 
+
+
+
+
+
     // TODO  是不是有点问题？
     private Table readTable(String schemaName, String tableName) throws IOException {
         GetMappingsRequest request = new GetMappingsRequest();
