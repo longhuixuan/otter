@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,10 @@ public class ElasticSearchTemplate implements NoSqlTemplate {
             if (StringUtils.isNotEmpty(column.getColumnValue())) {
                 recordM.put(column.getColumnName(), TypeHandlerFactory.convert(column.getColumnType(),column.getColumnValue()));
             }
+        }
+        // 增加修改时间写入
+        if(recordM.size()>0){
+            recordM.put("timestamp",new Date());
         }
         return recordM;
     }
